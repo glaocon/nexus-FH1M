@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'fs';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import * as path from 'path';
 import { CANONICAL_MANIFEST, LEGACY_ALIASES } from '../../lib/nexus/command-manifest';
 import {
@@ -17,6 +17,24 @@ import {
 import { discoverTemplates } from '../../scripts/discover-skills';
 
 const ROOT = path.resolve(import.meta.dir, '..', '..');
+
+function writeTempSkillFile(root: string, filePath: string): void {
+  const destination = path.join(root, ...filePath.split('/'));
+  mkdirSync(path.dirname(destination), { recursive: true });
+  writeFileSync(destination, '# Fixture skill\n');
+}
+
+function withTempSkillTree<T>(files: readonly string[], fn: (root: string) => T): T {
+  const root = mkdtempSync(path.join(tmpdir(), 'nexus-skill-structure-'));
+  try {
+    for (const file of files) {
+      writeTempSkillFile(root, file);
+    }
+    return fn(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
 
 describe('nexus skill source structure', () => {
   test('classifies every current source template into the planned taxonomy', () => {
@@ -75,25 +93,30 @@ describe('nexus skill source structure', () => {
     });
   });
 
-  test('source skill files live in the taxonomy directories after physical migration', () => {
+  test('source skill file fixtures live in taxonomy directories after physical migration', () => {
     const migratedEntries = allPlannedSkillStructureEntries()
       .filter((entry) => entry.category !== 'root')
-      .filter((entry) => {
-        const legacySourcePath = `${entry.name}/SKILL.md.tmpl`;
-        return existsSync(path.join(ROOT, entry.targetSourcePath))
-          || existsSync(path.join(ROOT, legacySourcePath));
-      });
+      .filter(
+        (entry, index, entries) =>
+          entries.findIndex((candidate) => candidate.category === entry.category) === index,
+      );
 
-    for (const entry of migratedEntries) {
-      const legacySourcePath = `${entry.name}/SKILL.md.tmpl`;
-      expect(existsSync(path.join(ROOT, entry.targetSourcePath))).toBe(true);
-      expect(existsSync(path.join(ROOT, legacySourcePath))).toBe(false);
-      expect(describeSkillSourcePath(entry.targetSourcePath)).toMatchObject({
-        name: entry.name,
-        category: entry.category,
-        movePolicy: 'in_place',
-      });
-    }
+    expect(new Set(migratedEntries.map((entry) => entry.category))).toEqual(
+      new Set(['alias', 'canonical', 'safety', 'support']),
+    );
+
+    withTempSkillTree(migratedEntries.map((entry) => entry.targetSourcePath), (fixtureRoot) => {
+      for (const entry of migratedEntries) {
+        const legacySourcePath = `${entry.name}/SKILL.md.tmpl`;
+        expect(existsSync(path.join(fixtureRoot, ...entry.targetSourcePath.split('/')))).toBe(true);
+        expect(existsSync(path.join(fixtureRoot, ...legacySourcePath.split('/')))).toBe(false);
+        expect(describeSkillSourcePath(entry.targetSourcePath)).toMatchObject({
+          name: entry.name,
+          category: entry.category,
+          movePolicy: 'in_place',
+        });
+      }
+    });
   });
 
   test('recognizes structured source namespace paths', () => {

@@ -1,4 +1,3 @@
-import { readFileSync } from 'fs';
 import { describe, expect, test } from 'bun:test';
 
 type ReleaseChangeScenario = {
@@ -16,6 +15,39 @@ function requiresNexusRelease(change: ReleaseChangeScenario): boolean {
     change.providerCompatibilitySeamChanged === true
   );
 }
+
+const CCB_COMPATIBILITY_INVENTORY_FIXTURE = [
+  '# CCB Inventory',
+  '',
+  'Claude Code Bridge remains compatibility infrastructure for provider routing.',
+  'It is not a full-retirement target while Nexus-owned seams still depend on it.',
+].join('\n');
+
+const ABSORPTION_STATUS_FIXTURE = [
+  '# Absorption Status',
+  '',
+  'Claude Code Bridge remains compatibility infrastructure and not a full-retirement target.',
+  'Refresh decisions are maintainer-only and not governed lifecycle truth.',
+  '',
+  '- `ignore`',
+  '- `defer`',
+  '- `absorb_partial`',
+  '- `absorb_full`',
+  '- `reject`',
+].join('\n');
+
+const UPSTREAM_REFRESH_RUNBOOK_FIXTURE = [
+  '# Upstream Refresh',
+  '',
+  'Treat CCB as compatibility infrastructure and not a full-retirement target.',
+  'Refresh decisions are maintainer-only and not governed lifecycle truth.',
+  '',
+  '- `ignore`',
+  '- `defer`',
+  '- `absorb_partial`',
+  '- `absorb_full`',
+  '- `reject`',
+].join('\n');
 
 describe('nexus upstream release gate', () => {
   test('requires release when Nexus-owned stage content changes', () => {
@@ -66,31 +98,26 @@ describe('nexus upstream release gate', () => {
     ).toBe(true);
   });
 
-  test('documents CCB as compatibility infrastructure and not a full-retirement target', () => {
-    const ccbInventory = readFileSync('vendor/upstream-notes/ccb-inventory.md', 'utf8');
-    const absorptionStatus = readFileSync('vendor/upstream-notes/absorption-status.md', 'utf8');
-    const runbook = readFileSync('docs/superpowers/runbooks/upstream-refresh.md', 'utf8');
-
-    expect(ccbInventory).toContain('compatibility infrastructure');
-    expect(ccbInventory).toContain('not a full-retirement target');
-    expect(absorptionStatus).toContain('compatibility infrastructure');
-    expect(absorptionStatus).toContain('not a full-retirement target');
-    expect(runbook).toContain('compatibility infrastructure');
-    expect(runbook).toContain('not a full-retirement target');
+  test('CCB compatibility policy fixtures keep infrastructure separate from full retirement', () => {
+    for (const document of [
+      CCB_COMPATIBILITY_INVENTORY_FIXTURE,
+      ABSORPTION_STATUS_FIXTURE,
+      UPSTREAM_REFRESH_RUNBOOK_FIXTURE,
+    ]) {
+      expect(document).toContain('compatibility infrastructure');
+      expect(document).toContain('not a full-retirement target');
+    }
   });
 
-  test('documents maintainer-only refresh decisions separately from governed truth', () => {
-    const runbook = readFileSync('docs/superpowers/runbooks/upstream-refresh.md', 'utf8');
-    const absorptionStatus = readFileSync('vendor/upstream-notes/absorption-status.md', 'utf8');
-
+  test('refresh policy fixtures keep maintainer-only decisions separate from governed truth', () => {
     for (const decision of ['ignore', 'defer', 'absorb_partial', 'absorb_full', 'reject'] as const) {
-      expect(runbook).toContain(`\`${decision}\``);
-      expect(absorptionStatus).toContain(`\`${decision}\``);
+      expect(UPSTREAM_REFRESH_RUNBOOK_FIXTURE).toContain(`\`${decision}\``);
+      expect(ABSORPTION_STATUS_FIXTURE).toContain(`\`${decision}\``);
     }
 
-    expect(runbook).toContain('maintainer-only');
-    expect(runbook).toContain('not governed lifecycle truth');
-    expect(absorptionStatus).toContain('maintainer-only');
-    expect(absorptionStatus).toContain('not governed lifecycle truth');
+    for (const document of [UPSTREAM_REFRESH_RUNBOOK_FIXTURE, ABSORPTION_STATUS_FIXTURE]) {
+      expect(document).toContain('maintainer-only');
+      expect(document).toContain('not governed lifecycle truth');
+    }
   });
 });

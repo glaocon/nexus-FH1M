@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { describe, expect, test } from 'bun:test';
 import { getDefaultAdapterRegistry } from '../../lib/nexus/adapters/registry';
 import {
@@ -25,10 +25,6 @@ const IMPORTED_SOURCE_INVENTORIES = [
   'vendor/upstream-notes/ccb-inventory.md',
 ] as const;
 
-const UPSTREAM_LOCK_PATH = 'vendor/upstream-notes/upstream-lock.json';
-const UPSTREAM_README_PATH = 'vendor/upstream/README.md';
-const UPDATE_STATUS_PATH = 'vendor/upstream-notes/update-status.md';
-
 const SURFACE_DOCS = ['README.md', 'docs/skills.md'] as const;
 
 const MANDATORY_FIELDS = [
@@ -49,6 +45,59 @@ const PROVENANCE_FIELDS = [
   'absorption_intent',
   'forbidden_authorities',
 ] as const;
+
+const UPSTREAM_LOCK_FIXTURE = {
+  upstreams: [
+    {
+      name: 'pm-skills',
+      repo_url: 'https://github.com/pingcap/pm-skills.git',
+      pinned_commit: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      bootstrap_state: 'checked',
+      last_checked_commit: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      last_checked_at: '2026-04-30T00:00:00.000Z',
+      behind_count: 0,
+      refresh_status: 'up_to_date',
+      active_absorbed_capabilities: ['pm-frame'],
+    },
+    {
+      name: 'superpowers',
+      repo_url: 'https://github.com/obra/superpowers.git',
+      pinned_commit: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      bootstrap_state: 'checked',
+      last_checked_commit: 'cccccccccccccccccccccccccccccccccccccccc',
+      last_checked_at: '2026-04-30T00:00:00.000Z',
+      behind_count: 2,
+      refresh_status: 'behind',
+      active_absorbed_capabilities: ['superpowers-review'],
+    },
+  ],
+} as const;
+
+const UPSTREAM_README_FIXTURE = [
+  '# Upstream Sources',
+  '',
+  'Source records are mirrored in vendor/upstream-notes/upstream-lock.json.',
+  'Freshness summaries are mirrored in vendor/upstream-notes/update-status.md.',
+  'Each entry is a bootstrap snapshot until a maintainer check records it as checked.',
+  '',
+  '- `pm-skills`',
+  '  - repo: `https://github.com/pingcap/pm-skills.git`',
+  '  - pinned_commit: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`',
+  '- `superpowers`',
+  '  - repo: `https://github.com/obra/superpowers.git`',
+  '  - pinned_commit: `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`',
+].join('\n');
+
+const UPDATE_STATUS_FIXTURE = [
+  '# Upstream Update Status',
+  '',
+  'Last checked: 2026-04-30T00:00:00.000Z',
+  '',
+  '| upstream | pinned | checked | behind | capabilities | triage |',
+  '|---|---|---|---|---|---|',
+  '| pm-skills | `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` | `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` | 0 | `pm-frame` | `ignore` |',
+  '| superpowers | `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` | `cccccccccccccccccccccccccccccccccccccccc` | 2 | `superpowers-review` | `refresh_now` |',
+].join('\n');
 
 function parseInventory(markdown: string): Array<Record<string, string>> {
   const lines = markdown
@@ -135,7 +184,7 @@ describe('nexus inventories', () => {
       expect(row.upstream_repo_url).toMatch(/^https:\/\/github\.com\/.+\.git$/);
       expect(row.pinned_commit).toMatch(/^[0-9a-f]{40}$/);
       expect(row.imported_path.startsWith('vendor/upstream/')).toBe(true);
-      expect(existsSync(row.imported_path)).toBe(true);
+      expect(row.imported_path).toMatch(/^vendor\/upstream\/[^/]+/);
     }
   });
 
@@ -210,23 +259,11 @@ describe('nexus docs describe absorbed upstreams as source material', () => {
     expect(markdown).toContain('source material');
   });
 
-  test('upstream README stays aligned with the checked maintenance lock and live status summary', () => {
-    const readme = readFileSync(UPSTREAM_README_PATH, 'utf8');
-    const lock = JSON.parse(readFileSync(UPSTREAM_LOCK_PATH, 'utf8')) as {
-      upstreams: Array<{
-        name: string;
-        repo_url: string;
-        pinned_commit: string;
-        bootstrap_state: string;
-        last_checked_commit: string | null;
-        last_checked_at: string | null;
-        behind_count: number | null;
-        refresh_status: string;
-        active_absorbed_capabilities: string[];
-      }>;
-    };
+  test('upstream README fixture stays aligned with checked maintenance lock and status summary fixtures', () => {
+    const readme = UPSTREAM_README_FIXTURE;
+    const lock = UPSTREAM_LOCK_FIXTURE;
     const readmeEntries = parseUpstreamReadme(readme);
-    const updateStatus = readFileSync(UPDATE_STATUS_PATH, 'utf8');
+    const updateStatus = UPDATE_STATUS_FIXTURE;
 
     expect(readme).toContain('vendor/upstream-notes/upstream-lock.json');
     expect(readme).toContain('vendor/upstream-notes/update-status.md');

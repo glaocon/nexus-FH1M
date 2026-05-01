@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, test } from 'bun:test';
 import { qaLearningCandidatesPath, reviewAdvisoryDispositionPath } from '../../lib/nexus/artifacts';
@@ -316,7 +316,7 @@ describe('nexus qa', () => {
   });
 
   test('writes qa learning candidates when valid candidates exist', async () => {
-    await runInTempRepo(async ({ cwd, run }) => {
+    await runInTempRepo(async ({ run }) => {
       await run('plan');
       await run('handoff');
       await run('build');
@@ -373,7 +373,7 @@ describe('nexus qa', () => {
 
       await run('qa', adapters);
 
-      expect(existsSync(join(cwd, learningCandidatesPath))).toBe(true);
+      expect(run.exists(learningCandidatesPath)).toBe(true);
       expect(await run.readJson(learningCandidatesPath)).toMatchObject({
         schema_version: 1,
         stage: 'qa',
@@ -401,7 +401,7 @@ describe('nexus qa', () => {
   });
 
   test('does not write qa learning candidates when none are valid', async () => {
-    await runInTempRepo(async ({ cwd, run }) => {
+    await runInTempRepo(async ({ run }) => {
       await run('plan');
       await run('handoff');
       await run('build');
@@ -441,7 +441,7 @@ describe('nexus qa', () => {
 
       await run('qa', adapters);
 
-      expect(existsSync(join(cwd, learningCandidatesPath))).toBe(false);
+      expect(run.exists(learningCandidatesPath)).toBe(false);
       expect(await run.readJson('.planning/current/qa/status.json')).toMatchObject({
         learning_candidates_path: null,
         learnings_recorded: false,
@@ -500,7 +500,7 @@ describe('nexus qa', () => {
       });
 
       await run('qa', withCandidatesAdapters);
-      expect(existsSync(join(cwd, learningCandidatesPath))).toBe(true);
+      expect(run.exists(learningCandidatesPath)).toBe(true);
 
       const reviewStatusPath = join(cwd, '.planning/current/review/status.json');
       const reviewStatus = await run.readJson('.planning/current/review/status.json');
@@ -549,7 +549,7 @@ describe('nexus qa', () => {
 
       await run('qa', noCandidatesAdapters);
 
-      expect(existsSync(join(cwd, learningCandidatesPath))).toBe(false);
+      expect(run.exists(learningCandidatesPath)).toBe(false);
       expect(await run.readJson('.planning/current/qa/status.json')).toMatchObject({
         learning_candidates_path: null,
         learnings_recorded: false,
@@ -608,7 +608,7 @@ describe('nexus qa', () => {
       });
 
       await run('qa', withCandidatesAdapters);
-      expect(existsSync(join(cwd, learningCandidatesPath))).toBe(true);
+      expect(run.exists(learningCandidatesPath)).toBe(true);
 
       const reviewStatusPath = join(cwd, '.planning/current/review/status.json');
       const reviewStatus = await run.readJson('.planning/current/review/status.json');
@@ -667,7 +667,7 @@ describe('nexus qa', () => {
 
       await expect(run('qa', routeMismatchAdapters)).rejects.toThrow('Requested and actual QA route diverged');
 
-      expect(existsSync(join(cwd, learningCandidatesPath))).toBe(false);
+      expect(run.exists(learningCandidatesPath)).toBe(false);
       expect(await run.readJson('.planning/current/qa/status.json')).toMatchObject({
         stage: 'qa',
         state: 'blocked',

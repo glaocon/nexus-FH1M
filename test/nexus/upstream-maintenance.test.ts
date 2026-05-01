@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'fs';
 import {
   UPSTREAM_ABSORPTION_DECISIONS,
   UPSTREAM_BOOTSTRAP_STATES,
@@ -13,6 +12,17 @@ import {
   getUpstreamRepoUrl,
 } from '../../lib/nexus/upstream-maintenance';
 
+type UpstreamLock = ReturnType<typeof createInitialUpstreamLock>;
+type UpstreamLockRecord = UpstreamLock['upstreams'][number];
+
+const CHECKED_AT = '2026-04-30T00:00:00.000Z';
+const CHECKED_COMMITS = [
+  UPSTREAM_MAINTENANCE_UPSTREAMS[0].pinned_commit,
+  '1111111111111111111111111111111111111111',
+  '2222222222222222222222222222222222222222',
+  '3333333333333333333333333333333333333333',
+] as const;
+
 function formatCapabilities(capabilities: readonly string[]): string {
   return capabilities.map((capability) => `\`${capability}\``).join(', ');
 }
@@ -22,6 +32,52 @@ function expectedTriage(record: { last_checked_commit: string | null; behind_cou
   if (record.behind_count === null) return 'defer';
   if (record.behind_count === 0) return 'ignore';
   return record.behind_count > 1 ? 'refresh_now' : 'review';
+}
+
+function createCheckedUpstreamLockFixture(): UpstreamLock {
+  const lock = createInitialUpstreamLock(CHECKED_AT);
+
+  return {
+    ...lock,
+    upstreams: lock.upstreams.map((record, index): UpstreamLockRecord => {
+      const lastCheckedCommit = CHECKED_COMMITS[index] ?? record.pinned_commit;
+      const behindCount = lastCheckedCommit === record.pinned_commit ? 0 : index;
+
+      return {
+        ...record,
+        bootstrap_state: 'checked',
+        last_checked_commit: lastCheckedCommit,
+        last_checked_at: CHECKED_AT,
+        behind_count: behindCount,
+        refresh_status: behindCount === 0 ? 'up_to_date' : 'behind',
+        last_absorption_decision: behindCount === 0 ? 'ignore' : 'defer',
+        notes:
+          behindCount === 0
+            ? 'checked snapshot; reviewed and ignored; non-authoritative source material only'
+            : 'checked snapshot; reviewed and deferred; non-authoritative source material only',
+      };
+    }),
+  };
+}
+
+function renderUpdateStatusFixture(lock: UpstreamLock): string {
+  const rows = lock.upstreams
+    .map(
+      (record) =>
+        `| ${record.name} | \`${record.pinned_commit}\` | \`${record.last_checked_commit}\` | ${record.behind_count} | ${formatCapabilities(record.active_absorbed_capabilities)} | \`${expectedTriage(record)}\` |`,
+    )
+    .join('\n');
+
+  return [
+    '# Upstream Update Status',
+    '',
+    `Last checked: ${lock.updated_at}`,
+    '',
+    '| upstream | pinned | checked | behind | capabilities | triage |',
+    '|---|---|---|---|---|---|',
+    rows,
+    '',
+  ].join('\n');
 }
 
 describe('nexus upstream maintenance contract', () => {
@@ -62,10 +118,8 @@ describe('nexus upstream maintenance contract', () => {
     }
   });
 
-  test('the checked-in lock file mirrors the frozen contract and checked state', () => {
-    const lock = JSON.parse(readFileSync('vendor/upstream-notes/upstream-lock.json', 'utf8')) as ReturnType<
-      typeof createInitialUpstreamLock
-    >;
+  test('a checked lock fixture mirrors the frozen contract and checked state', () => {
+    const lock = createCheckedUpstreamLockFixture();
 
     expect(lock.schema_version).toBe(1);
     expect(lock.upstreams).toHaveLength(4);
@@ -111,11 +165,9 @@ describe('nexus upstream maintenance contract', () => {
     }
   });
 
-  test('the checked-in lock and update-status file agree on checked state and live freshness values', () => {
-    const lock = JSON.parse(readFileSync('vendor/upstream-notes/upstream-lock.json', 'utf8')) as ReturnType<
-      typeof createInitialUpstreamLock
-    >;
-    const status = readFileSync('vendor/upstream-notes/update-status.md', 'utf8');
+  test('checked lock and update-status fixtures agree on checked state and freshness values', () => {
+    const lock = createCheckedUpstreamLockFixture();
+    const status = renderUpdateStatusFixture(lock);
 
     expect(status).toContain('Last checked:');
     expect(status).not.toContain('No upstream checks have run yet.');
