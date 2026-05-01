@@ -262,7 +262,7 @@ export function refreshCurrentCloseoutFollowOnArtifacts(cwd: string): RefreshClo
   const writes: Array<{ path: string; content: string }> = [
     {
       path: closeoutFollowOnSummaryMarkdownPath(),
-      content: `${renderFollowOnEvidenceMarkdown(followOnSummary)}${renderLandingReentryMarkdown(landingReentry)}`,
+      content: renderFollowOnEvidenceMarkdown(followOnSummary),
     },
     {
       path: closeoutFollowOnSummaryJsonPath(),

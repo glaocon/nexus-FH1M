@@ -181,7 +181,10 @@ export function buildFollowOnEvidenceSummary(input: {
 function renderLandingReentryBlock(record: FollowOnEvidenceSummaryRecord): string[] {
   const shipEvidence = record.evidence.ship as FollowOnEvidenceSummaryRecord['evidence']['ship'] & {
     landing_reentry?: {
+      deploy_result_path?: string | null;
       merge_status: string | null;
+      deploy_status?: string | null;
+      verification_status?: string | null;
       failure_kind: string | null;
       next_action: string | null;
       ship_handoff_current: boolean | null;
@@ -198,7 +201,10 @@ function renderLandingReentryBlock(record: FollowOnEvidenceSummaryRecord): strin
   return [
     '## Landing Re-entry',
     '',
+    `- Deploy result: ${landingReentry.deploy_result_path ?? shipEvidence.deploy_result_path ?? 'unknown'}`,
     `- Merge status: ${landingReentry.merge_status ?? 'unknown'}`,
+    `- Deploy status: ${landingReentry.deploy_status ?? shipEvidence.deploy_status ?? 'unknown'}`,
+    `- Verification status: ${landingReentry.verification_status ?? shipEvidence.verification_status ?? 'unknown'}`,
     `- Failure kind: ${landingReentry.failure_kind ?? 'unknown'}`,
     `- Next action: ${landingReentry.next_action ?? 'none'}`,
     `- Ship handoff current: ${
