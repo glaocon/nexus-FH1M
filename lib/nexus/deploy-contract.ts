@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { deployContractJsonPath } from './artifacts';
-import { readJsonPartial } from './validation-helpers';
+import { isRecord, readJsonPartial } from './validation-helpers';
 import {
   DEPLOY_CONFIG_SOURCES,
   DEPLOY_PLATFORMS,
@@ -17,16 +17,28 @@ import {
   type DeployTriggerKind,
 } from './types';
 
-function oneOf<T extends readonly string[]>(value: string | null | undefined, options: T, fallback: T[number]): T[number] {
-  if (!value) {
+function stringOrNull(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
+
+function recordOrNull(value: unknown): Record<string, unknown> | null {
+  return isRecord(value) ? value : null;
+}
+
+function oneOf<T extends readonly string[]>(value: unknown, options: T, fallback: T[number]): T[number] {
+  if (typeof value !== 'string' || value.length === 0) {
     return fallback;
   }
 
   return (options as readonly string[]).includes(value) ? value as T[number] : fallback;
 }
 
-function normalizePlatform(value: string | null | undefined): DeployPlatform {
-  const normalized = value?.trim().toLowerCase() ?? '';
+function normalizePlatform(value: unknown): DeployPlatform {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
   if (!normalized) {
     return 'unknown';
   }
@@ -44,8 +56,8 @@ function normalizePlatform(value: string | null | undefined): DeployPlatform {
   return oneOf(normalized, DEPLOY_PLATFORMS, 'unknown');
 }
 
-function normalizeProjectType(value: string | null | undefined): DeployProjectType {
-  const normalized = value?.trim().toLowerCase() ?? '';
+function normalizeProjectType(value: unknown): DeployProjectType {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
   if (!normalized) {
     return 'unknown';
   }
@@ -59,8 +71,8 @@ function normalizeProjectType(value: string | null | undefined): DeployProjectTy
   return oneOf(normalized, DEPLOY_PROJECT_TYPES, 'unknown');
 }
 
-function normalizeTrigger(value: string | null | undefined): DeployTriggerKind {
-  const normalized = value?.trim().toLowerCase() ?? '';
+function normalizeTrigger(value: unknown): DeployTriggerKind {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
   if (!normalized) {
     return 'none';
   }
@@ -76,10 +88,11 @@ function normalizeTrigger(value: string | null | undefined): DeployTriggerKind {
   return oneOf(normalized, DEPLOY_TRIGGER_KINDS, 'command');
 }
 
-function normalizeStatusKind(command: string | null | undefined, workflow: string | null | undefined): DeployStatusKind {
-  const normalizedCommand = command?.trim() ?? '';
+function normalizeStatusKind(command: unknown, workflow: unknown): DeployStatusKind {
+  const normalizedCommand = typeof command === 'string' ? command.trim() : '';
+  const normalizedWorkflow = typeof workflow === 'string' ? workflow.trim() : '';
   if (!normalizedCommand || normalizedCommand.toLowerCase() === 'none') {
-    return workflow ? 'github_actions' : 'none';
+    return normalizedWorkflow ? 'github_actions' : 'none';
   }
   if (normalizedCommand.toLowerCase().includes('http health check')) {
     return 'http';
@@ -102,8 +115,8 @@ function parseHookValue(section: string, label: string): string | null {
   return value.length > 0 ? value : null;
 }
 
-function sanitizeCommand(value: string | null | undefined): string | null {
-  if (!value) {
+function sanitizeCommand(value: unknown): string | null {
+  if (typeof value !== 'string') {
     return null;
   }
 
@@ -115,8 +128,8 @@ function sanitizeCommand(value: string | null | undefined): string | null {
   return normalized;
 }
 
-function splitHooks(value: string | null | undefined): string[] {
-  if (!value) {
+function splitHooks(value: unknown): string[] {
+  if (typeof value !== 'string') {
     return [];
   }
 
@@ -149,44 +162,47 @@ function readSection(content: string, header: string): string | null {
   return collected.join('\n').trim();
 }
 
-function normalizeSurfaceLabel(value: string | null | undefined): string | null {
-  const normalized = value?.trim() ?? '';
+function normalizeSurfaceLabel(value: unknown): string | null {
+  const normalized = typeof value === 'string' ? value.trim() : '';
   return normalized.length > 0 ? normalized : null;
 }
 
-function normalizeSecondarySurfaces(contract: Partial<DeployContractRecord>): DeployContractRecord['secondary_surfaces'] {
+function normalizeSecondarySurfaces(contract: Record<string, unknown>): DeployContractRecord['secondary_surfaces'] {
   if (!Array.isArray(contract.secondary_surfaces)) {
     return [];
   }
 
   return contract.secondary_surfaces
     .map((surface, index) => {
-      if (!surface || typeof surface !== 'object') {
+      const entry = recordOrNull(surface);
+      if (!entry) {
         return null;
       }
 
-      const entry = surface as Partial<DeployContractRecord['secondary_surfaces'][number]>;
-      const label = normalizeSurfaceLabel(entry.label ?? null) ?? `secondary-${index + 1}`;
+      const production = recordOrNull(entry.production);
+      const deployTrigger = recordOrNull(entry.deploy_trigger);
+      const deployStatus = recordOrNull(entry.deploy_status);
+      const label = normalizeSurfaceLabel(entry.label) ?? `secondary-${index + 1}`;
 
       return {
         label,
-        platform: normalizePlatform(entry.platform ?? null),
-        project_type: normalizeProjectType(entry.project_type ?? null),
+        platform: normalizePlatform(entry.platform),
+        project_type: normalizeProjectType(entry.project_type),
         production: {
-          url: entry.production?.url ?? null,
-          health_check: entry.production?.health_check ?? null,
+          url: stringOrNull(production?.url),
+          health_check: stringOrNull(production?.health_check),
         },
         deploy_trigger: {
-          kind: oneOf(entry.deploy_trigger?.kind ?? null, DEPLOY_TRIGGER_KINDS, 'none'),
-          details: entry.deploy_trigger?.details ?? null,
+          kind: oneOf(deployTrigger?.kind, DEPLOY_TRIGGER_KINDS, 'none'),
+          details: stringOrNull(deployTrigger?.details),
         },
-        deploy_workflow: entry.deploy_workflow ?? null,
+        deploy_workflow: stringOrNull(entry.deploy_workflow),
         deploy_status: {
-          kind: oneOf(entry.deploy_status?.kind ?? null, DEPLOY_STATUS_KINDS, 'none'),
-          command: entry.deploy_status?.command ?? null,
+          kind: oneOf(deployStatus?.kind, DEPLOY_STATUS_KINDS, 'none'),
+          command: stringOrNull(deployStatus?.command),
         },
-        notes: Array.isArray(entry.notes) ? entry.notes.filter((item): item is string => typeof item === 'string') : [],
-        sources: Array.isArray(entry.sources) ? entry.sources.filter((item): item is string => typeof item === 'string') : [],
+        notes: stringArray(entry.notes),
+        sources: stringArray(entry.sources),
       };
     })
     .filter((surface): surface is DeployContractRecord['secondary_surfaces'][number] => surface !== null);
@@ -198,40 +214,46 @@ export function readCanonicalDeployContract(cwd: string): DeployContractRecord |
   // into the same null path, matching the existing "no canonical contract"
   // semantic and removing the latent crash.
   const parsed = readJsonPartial<DeployContractRecord>(join(cwd, deployContractJsonPath()));
-  if (parsed === null) {
+  if (!isRecord(parsed)) {
     return null;
   }
+
+  const production = recordOrNull(parsed.production);
+  const staging = recordOrNull(parsed.staging);
+  const deployTrigger = recordOrNull(parsed.deploy_trigger);
+  const deployStatus = recordOrNull(parsed.deploy_status);
+  const customHooks = recordOrNull(parsed.custom_hooks);
 
   return {
     schema_version: 1,
     configured_at: typeof parsed.configured_at === 'string' ? parsed.configured_at : new Date().toISOString(),
-    primary_surface_label: normalizeSurfaceLabel(parsed.primary_surface_label ?? null),
-    platform: normalizePlatform(parsed.platform ?? null),
-    project_type: normalizeProjectType(parsed.project_type ?? null),
+    primary_surface_label: normalizeSurfaceLabel(parsed.primary_surface_label),
+    platform: normalizePlatform(parsed.platform),
+    project_type: normalizeProjectType(parsed.project_type),
     production: {
-      url: parsed.production?.url ?? null,
-      health_check: parsed.production?.health_check ?? null,
+      url: stringOrNull(production?.url),
+      health_check: stringOrNull(production?.health_check),
     },
     staging: {
-      url: parsed.staging?.url ?? null,
-      workflow: parsed.staging?.workflow ?? null,
+      url: stringOrNull(staging?.url),
+      workflow: stringOrNull(staging?.workflow),
     },
     deploy_trigger: {
-      kind: oneOf(parsed.deploy_trigger?.kind ?? null, DEPLOY_TRIGGER_KINDS, 'none'),
-      details: parsed.deploy_trigger?.details ?? null,
+      kind: oneOf(deployTrigger?.kind, DEPLOY_TRIGGER_KINDS, 'none'),
+      details: stringOrNull(deployTrigger?.details),
     },
-    deploy_workflow: parsed.deploy_workflow ?? null,
+    deploy_workflow: stringOrNull(parsed.deploy_workflow),
     deploy_status: {
-      kind: oneOf(parsed.deploy_status?.kind ?? null, DEPLOY_STATUS_KINDS, 'none'),
-      command: parsed.deploy_status?.command ?? null,
+      kind: oneOf(deployStatus?.kind, DEPLOY_STATUS_KINDS, 'none'),
+      command: stringOrNull(deployStatus?.command),
     },
     custom_hooks: {
-      pre_merge: Array.isArray(parsed.custom_hooks?.pre_merge) ? parsed.custom_hooks.pre_merge.filter((entry): entry is string => typeof entry === 'string') : [],
-      post_merge: Array.isArray(parsed.custom_hooks?.post_merge) ? parsed.custom_hooks.post_merge.filter((entry): entry is string => typeof entry === 'string') : [],
+      pre_merge: stringArray(customHooks?.pre_merge),
+      post_merge: stringArray(customHooks?.post_merge),
     },
     secondary_surfaces: normalizeSecondarySurfaces(parsed),
-    notes: Array.isArray(parsed.notes) ? parsed.notes.filter((entry): entry is string => typeof entry === 'string') : [],
-    sources: Array.isArray(parsed.sources) ? parsed.sources.filter((entry): entry is string => typeof entry === 'string') : [],
+    notes: stringArray(parsed.notes),
+    sources: stringArray(parsed.sources),
   };
 }
 
