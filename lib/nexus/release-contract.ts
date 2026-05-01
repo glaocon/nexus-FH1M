@@ -191,7 +191,7 @@ export function getReleaseTag(version: string): string {
   return `v${version}`;
 }
 
-export function getReleaseManifestPath(rootDir = process.cwd()): string {
+export function getReleaseManifestPath(rootDir: string): string {
   return join(rootDir, RELEASE_MANIFEST_FILE);
 }
 

@@ -7,11 +7,11 @@ function resolveRepoPath(cwd: string, relativePath: string): string {
   return join(cwd, relativePath);
 }
 
-export function readStageStatus(statusPath: string, cwd = process.cwd()): StageStatus | null {
+export function readStageStatus(statusPath: string, cwd: string): StageStatus | null {
   return readJsonFile(resolveRepoPath(cwd, statusPath), (value) => value as StageStatus);
 }
 
-export function writeStageStatus(statusPath: string, status: StageStatus, cwd = process.cwd()): void {
+export function writeStageStatus(statusPath: string, status: StageStatus, cwd: string): void {
   const path = resolveRepoPath(cwd, statusPath);
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, JSON.stringify(status, null, 2) + '\n');

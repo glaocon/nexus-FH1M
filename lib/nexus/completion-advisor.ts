@@ -293,7 +293,7 @@ function advisorSurfaces(record: CompletionAdvisorRecord): string[] {
 export function attachExternalInstalledSkillRecommendations(
   record: CompletionAdvisorRecord,
   verificationMatrix: VerificationMatrixRecord | null = null,
-  externalSkills: InstalledSkillRecord[] = discoverExternalInstalledSkills(),
+  externalSkills: InstalledSkillRecord[] = [],
 ): CompletionAdvisorRecord {
   if (record.requires_user_choice || record.interaction_mode !== 'recommended_choice') {
     return record;

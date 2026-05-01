@@ -206,16 +206,16 @@ export function getManagedInstallTarget(installRoot: string, homeDir = process.e
   };
 }
 
-export function readInstallMetadata(installRoot = process.cwd()): InstallMetadata | null {
+export function readInstallMetadata(installRoot: string): InstallMetadata | null {
   return readJsonFile(getInstallMetadataPath(installRoot), validateInstallMetadata);
 }
 
-export function writeInstallMetadata(metadata: InstallMetadata, installRoot = process.cwd()): void {
+export function writeInstallMetadata(metadata: InstallMetadata, installRoot: string): void {
   const path = getInstallMetadataPath(installRoot);
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(metadata, null, 2)}\n`);
 }
 
-export function getInstallMetadataPath(installRoot = process.cwd()): string {
+export function getInstallMetadataPath(installRoot: string): string {
   return join(installRoot, INSTALL_METADATA_FILE);
 }

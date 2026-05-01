@@ -278,14 +278,14 @@ export function assertCloseoutHistory(
   }
 }
 
-export function archiveAuditWorkspace(runId: string, cwd = process.cwd()): string {
+export function archiveAuditWorkspace(runId: string, cwd: string): string {
   const source = join(cwd, '.planning', 'audits', 'current');
   const destination = join(cwd, archiveRootFor(runId));
   cpSync(source, destination, { recursive: true, force: true });
   return archiveRootFor(runId);
 }
 
-export function assertArchiveConsistency(runId: string, reviewStatus: StageStatus, cwd = process.cwd()): void {
+export function assertArchiveConsistency(runId: string, reviewStatus: StageStatus, cwd: string): void {
   if (reviewStatus.archive_required !== true) {
     return;
   }
@@ -304,11 +304,11 @@ export function assertArchiveConsistency(runId: string, reviewStatus: StageStatu
   }
 }
 
-export function archiveExists(runId: string, cwd = process.cwd()): boolean {
+export function archiveExists(runId: string, cwd: string): boolean {
   return existsSync(join(cwd, archiveRootFor(runId)));
 }
 
-export function assertReviewReadyForCloseout(reviewStatus: StageStatus, cwd = process.cwd()): void {
+export function assertReviewReadyForCloseout(reviewStatus: StageStatus, cwd: string): void {
   if (
     reviewStatus.state !== 'completed'
     || reviewStatus.decision !== 'audit_recorded'

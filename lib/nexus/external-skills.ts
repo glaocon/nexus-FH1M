@@ -203,7 +203,7 @@ export function classifyInstalledSkill(input: {
   };
 }
 
-export function defaultExternalSkillRoots(cwd = process.cwd(), home = homedir()): string[] {
+export function defaultExternalSkillRoots(cwd: string, home = homedir()): string[] {
   return unique([
     join(cwd, '.claude', 'skills'),
     join(cwd, '.agents', 'skills'),
@@ -217,11 +217,19 @@ export function defaultExternalSkillRoots(cwd = process.cwd(), home = homedir())
   ]);
 }
 
-export function discoverExternalInstalledSkills(options: {
-  roots?: string[];
-  cwd?: string;
-  home?: string;
-} = {}): InstalledSkillRecord[] {
+type DiscoverExternalInstalledSkillsOptions =
+  | {
+    roots: string[];
+    cwd?: string;
+    home?: string;
+  }
+  | {
+    roots?: undefined;
+    cwd: string;
+    home?: string;
+  };
+
+export function discoverExternalInstalledSkills(options: DiscoverExternalInstalledSkillsOptions): InstalledSkillRecord[] {
   if (process.env.NEXUS_EXTERNAL_SKILLS === '0') {
     return [];
   }

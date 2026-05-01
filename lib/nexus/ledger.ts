@@ -26,15 +26,15 @@ import { readJsonFile } from './validation-helpers';
 
 const LEDGER_PATH = '.planning/nexus/current-run.json';
 
-export function ledgerPath(cwd = process.cwd()): string {
+export function ledgerPath(cwd: string): string {
   return join(cwd, LEDGER_PATH);
 }
 
-export function readLedger(cwd = process.cwd()): RunLedger | null {
+export function readLedger(cwd: string): RunLedger | null {
   return readJsonFile(ledgerPath(cwd), (value) => value as RunLedger);
 }
 
-export function writeLedger(ledger: RunLedger, cwd = process.cwd()): void {
+export function writeLedger(ledger: RunLedger, cwd: string): void {
   mkdirSync(join(cwd, '.planning', 'nexus'), { recursive: true });
   writeFileSync(ledgerPath(cwd), JSON.stringify(ledger, null, 2) + '\n');
 }
@@ -49,7 +49,7 @@ function closeoutReadyForRollover(status: StageStatus | null, runId: string): bo
   );
 }
 
-export function isCompletedCloseoutLedger(ledger: RunLedger, cwd = process.cwd()): boolean {
+export function isCompletedCloseoutLedger(ledger: RunLedger, cwd: string): boolean {
   if (ledger.current_stage !== 'closeout' || ledger.status !== 'completed') {
     return false;
   }
@@ -92,7 +92,7 @@ function syncArchivedCurrentArtifact(runId: string, currentArtifactPath: string,
   cpSync(sourcePath, archivedPath, { force: true });
 }
 
-export function archiveCompletedRunLedger(ledger: RunLedger, cwd = process.cwd()): void {
+export function archiveCompletedRunLedger(ledger: RunLedger, cwd: string): void {
   const archivedLedger = join(cwd, archivedRunLedgerPath(ledger.run_id));
   mkdirSync(dirname(archivedLedger), { recursive: true });
   writeFileSync(archivedLedger, JSON.stringify(ledger, null, 2) + '\n');

@@ -62,11 +62,11 @@ export function validateReleasePreflightReport(report: unknown): ReleasePrefligh
 }
 
 export function buildReleasePreflightReport(input: {
-  rootDir?: string;
+  rootDir: string;
   gitStatusLines: string[];
   existingTags: string[];
 }): ReleasePreflightReport {
-  const rootDir = input.rootDir ?? process.cwd();
+  const rootDir = input.rootDir;
   const version = readFileSync(join(rootDir, 'VERSION'), 'utf8').trim();
   const packageJson = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8')) as { version?: unknown };
   const manifest = JSON.parse(readFileSync(join(rootDir, 'release.json'), 'utf8')) as unknown;
