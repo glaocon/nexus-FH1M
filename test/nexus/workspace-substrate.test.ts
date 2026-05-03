@@ -9,6 +9,9 @@ import type { NexusAdapters } from '../../lib/nexus/adapters/types';
 import type { ExecutionSelection } from '../../lib/nexus/execution-topology';
 import {
   allocateFreshRunWorkspace,
+  assertRunWorkspaceSyncPath,
+  isRunWorkspaceSyncPath,
+  RUN_WORKSPACE_SYNC_PATHS,
   resolveExecutionWorkspace,
   resolveSessionRootRecord,
   syncRunWorkspaceArtifacts,
@@ -278,6 +281,23 @@ function governedAdapters(seen: SeenCall[]): NexusAdapters {
 }
 
 describe('nexus workspace substrate', () => {
+  test('guards run workspace sync paths with an explicit allowlist', () => {
+    expect([...RUN_WORKSPACE_SYNC_PATHS]).toEqual([
+      '.planning/current',
+      '.planning/audits/current',
+      '.planning/nexus/current-run.json',
+      'docs/product',
+    ]);
+    expect(isRunWorkspaceSyncPath('.planning/current')).toBe(true);
+    expect(isRunWorkspaceSyncPath('docs/product')).toBe(true);
+    expect(isRunWorkspaceSyncPath('.git/config')).toBe(false);
+    expect(isRunWorkspaceSyncPath('../outside')).toBe(false);
+    expect(() => assertRunWorkspaceSyncPath('.planning/current')).not.toThrow();
+    expect(() => assertRunWorkspaceSyncPath('.git/config')).toThrow(
+      'Refusing to sync non-allowlisted run workspace path',
+    );
+  });
+
   test('allocates a fresh run workspace under .nexus-worktrees instead of reusing a legacy implement worktree', async () => {
     await runInTempGitRepo(async ({ cwd }) => {
       const legacyWorktreePath = createLinkedWorktree(cwd, '.worktrees');

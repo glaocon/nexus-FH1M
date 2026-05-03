@@ -5,12 +5,14 @@ import { getPrimaryWorktreeRoot } from './support-surface';
 import type { SessionRootRecord, WorkspaceRecord } from './types';
 
 const LEGACY_WORKTREE_ROOT = '.worktrees';
-const RUN_WORKSPACE_SYNC_PATHS = [
+export const RUN_WORKSPACE_SYNC_PATHS = [
   '.planning/current',
   '.planning/audits/current',
   '.planning/nexus/current-run.json',
   'docs/product',
 ] as const;
+export type RunWorkspaceSyncPath = (typeof RUN_WORKSPACE_SYNC_PATHS)[number];
+const RUN_WORKSPACE_SYNC_PATH_SET = new Set<string>(RUN_WORKSPACE_SYNC_PATHS);
 
 type GitWorktreeEntry = {
   path: string;
@@ -27,6 +29,16 @@ type RemotePrimaryBranch = {
   branch: string;
   ref: string;
 };
+
+export function isRunWorkspaceSyncPath(relativePath: string): relativePath is RunWorkspaceSyncPath {
+  return RUN_WORKSPACE_SYNC_PATH_SET.has(relativePath);
+}
+
+export function assertRunWorkspaceSyncPath(relativePath: string): asserts relativePath is RunWorkspaceSyncPath {
+  if (!isRunWorkspaceSyncPath(relativePath)) {
+    throw new Error(`Refusing to sync non-allowlisted run workspace path: ${relativePath}`);
+  }
+}
 
 function gitStdout(cwd: string, args: string[]): string | null {
   const result = spawnSync('git', ['-C', cwd, ...args], {
@@ -128,6 +140,7 @@ function syncRepoPathIntoWorkspace(
   workspacePath: string,
   relativePath: string,
 ): void {
+  assertRunWorkspaceSyncPath(relativePath);
   const sourcePath = join(repoRoot, relativePath);
   const targetPath = join(workspacePath, relativePath);
 

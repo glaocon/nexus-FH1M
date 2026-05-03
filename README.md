@@ -47,8 +47,11 @@ Governed work is recorded in `lib/nexus/` and `.planning/`.
 
 ## Repository structure
 
-Nexus keeps the generated host skills in `.agents/skills/` and
-`.factory/skills/`, but source templates are governed by a stricter taxonomy in
+Nexus generates host-specific skill output for four hosts: Claude
+(`.claude/skills/`), Codex (`.agents/skills/`), Gemini CLI
+(`.gemini/skills/`), and Factory (`.factory/skills/`). The four generated
+trees are gitignored — they are produced by `bun run gen:skill-docs --host
+<host>` from a single set of templates governed by a stricter taxonomy in
 `lib/nexus/skill-structure.ts`:
 
 - root entrypoint source: `skills/root/nexus/SKILL.md.tmpl`
@@ -65,10 +68,15 @@ runtime paths such as `$NEXUS_ROOT/review/checklist.md`,
 `$NEXUS_ROOT/cso/ACKNOWLEDGEMENTS.md` for generated skills.
 `bun run skill:check` reports the active taxonomy so future source moves can be
 reviewed before they affect installs.
-The broader repo cleanup map is documented in
-`docs/architecture/repo-taxonomy-v2.md`; it records intended future roots such
-as `runtimes/`, `references/`, `hosts/gemini-cli`, and `vendor/` without moving
-current runtime paths.
+
+The post-taxonomy-v2 layout is documented in
+`docs/architecture/repo-taxonomy-v2.md`. The active roots include
+`runtimes/` (executable browse / design / safety hooks), `references/`
+(lazy-loaded checklists and templates), `vendor/` (absorbed upstream
+snapshots and maintenance metadata), and `hosts/` (tracked host facade
+sources for Claude / Codex / Gemini CLI / Factory). `hosts/gemini-cli/` and
+`hosts/factory/` currently hold only facade READMEs; tracked host-specific
+assets land there as they are added.
 
 ## How it runs
 
@@ -316,14 +324,21 @@ Then update the project `CLAUDE.md` so it stays Nexus-first, and use `hosts/clau
 
 ### Other hosts
 
-Install for Codex-compatible hosts:
+Install for Codex-compatible hosts. Two install modes — pick the one that matches your team's setup:
+
+- **Global** (`~/nexus`) — single Nexus install shared across all your projects. Use this when you work alone or when teammates manage their own Nexus install separately. Lower disk usage, single upgrade point.
+- **Repo-local** (`.agents/skills/nexus`) — Nexus lives inside the project repo's Codex sidecar tree. Use this when you want every contributor in a repo to get the exact same Nexus version pinned to that branch (similar to vendoring a dependency). Slightly larger repo footprint, version-controlled.
+
+If you're unsure, start with **global** — switch to repo-local later if your team needs version pinning.
+
+#### Global install
 
 ```bash
 git clone --single-branch --depth 1 https://github.com/LaPaGaYo/nexus.git ~/nexus
 cd ~/nexus && ./setup --host codex
 ```
 
-Install into a repo-local `.agents/skills/` root:
+#### Repo-local install
 
 ```bash
 git clone --single-branch --depth 1 https://github.com/LaPaGaYo/nexus.git .agents/skills/nexus

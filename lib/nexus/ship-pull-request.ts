@@ -1,6 +1,7 @@
 import type { PullRequestRecord } from './types';
 import { runNexusCommand, type NexusCommandRunner } from './command-runner';
 import { shellQuotePosix } from './shell-quote';
+import { isRecord } from './validation-helpers';
 
 interface GithubPullRequestPayload {
   number?: number;
@@ -82,9 +83,20 @@ function fromGithubPayload(
   };
 }
 
+function isGithubPullRequestPayload(value: unknown): value is GithubPullRequestPayload {
+  return isRecord(value)
+    && typeof value.number === 'number'
+    && typeof value.url === 'string'
+    && typeof value.state === 'string'
+    && typeof value.headRefName === 'string'
+    && typeof value.headRefOid === 'string'
+    && typeof value.baseRefName === 'string';
+}
+
 function parseGithubPullRequest(stdout: string): GithubPullRequestPayload | null {
   try {
-    return JSON.parse(stdout) as GithubPullRequestPayload;
+    const parsed = JSON.parse(stdout) as unknown;
+    return isGithubPullRequestPayload(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -282,11 +294,20 @@ export async function resolveShipPullRequest(
   });
 
   if (baseBranchResult.exitCode !== 0) {
+    const existingBaseBranch = existingPr.ok && typeof existingPr.pullRequest.baseRefName === 'string'
+      ? existingPr.pullRequest.baseRefName
+      : null;
+    const reason = baseBranchResult.stderr.trim()
+      || baseBranchResult.stdout.trim()
+      || (!existingPr.ok ? existingPr.error : null)
+      || 'gh repo view failed';
+
     return unavailablePullRequest(
       headBranch,
-      baseBranchResult.stderr.trim() || baseBranchResult.stdout.trim() || existingPr.error,
+      reason,
       'github',
       headSha,
+      existingBaseBranch,
     );
   }
 
@@ -317,7 +338,7 @@ export async function resolveShipPullRequest(
 
   const createdPr = await readGithubPullRequest(cwd, runCommand);
   if (!createdPr.ok) {
-    return unavailablePullRequest(headBranch, createdPr.error);
+    return unavailablePullRequest(headBranch, createdPr.error, 'github', headSha, baseBranch);
   }
 
   return fromGithubPayload(createdPr.pullRequest, 'created');

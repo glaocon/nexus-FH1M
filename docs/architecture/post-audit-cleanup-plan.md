@@ -209,7 +209,7 @@ build-script rewrite).
 |---|---|---|---|
 | ST1 | High | `lib/nexus/` has 53 files at one level (with 6 subdirs that cover only some concerns). `release-*` (4 files), `review-*` (4), `ledger-*` (2), `runtime-*` (2), `follow-on-*` (2), `host-*` (3) all stay flat. | Subdir by concern: `release/`, `review/`, `ledger/`, `paths/`, `host/`, `follow-on/`. |
 | ST2 | Medium | `lib/` only contains `lib/nexus/`. Unused indirection layer. | Either populate `lib/` (e.g., `lib/shared/`) or drop the layer. |
-| ST3 | Medium | Root has ~24 files including 7 large markdown docs (~5,000 lines). `SKILL.md` (580 lines), `CHANGELOG.md` (1799), `TODOS.md` (715), `BROWSER.md` (399) at root. | Move `CHANGELOG.md` and `TODOS.md` to `docs/`; keep `README/CLAUDE/CONTRIBUTING/LICENSE` at root. |
+| ST3 | Medium | Root has ~24 files including 7 large markdown docs (~5,000 lines). `SKILL.md` (580 lines), `CHANGELOG.md` (1799), `TODOS.md` (715), `BROWSER.md` (399) at root. | **NOT a doc-only move**: `TODOS.md` is the unified backlog read/written by `/ship`, `/qa`, planning/review/retro skills (CONTRIBUTING:316, `scripts/resolvers/preamble.ts:580-581`, `scripts/resolvers/utility.ts:196`). `CHANGELOG.md` is read by `document-release` (`scripts/resolvers/utility.ts:449`). Both are runtime artifacts referenced by relative path in skill prose. Moving requires updating ~12 SKILL.md.tmpl + 12 generated SKILL.md + 3 resolver files + `lib/nexus/repo-taxonomy.ts:597,604` ROOT_FILES + regen + agent-behavior tests. **Code-shaped, not doc-shaped** — must wait for Phase 3 high-risk module test coverage. |
 | ST4 | Medium | `bin/` mixes TypeScript source (`nexus.ts`, `nexus-global-discover.ts`) and built binaries. | Move `.ts` sources to `lib/nexus/cli/` and build into `bin/`. |
 | ST5 | Medium | `runtimes/safety/` (hook helpers) collides naming with `skills/safety/` (skill defs). | Rename `runtimes/safety/` → `runtimes/hooks/`. |
 | ST6 | Low | `hosts/claude/` vs `hosts/gemini-cli/` inconsistent suffix. | Standardize on suffix or no-suffix across hosts. |
@@ -328,13 +328,39 @@ Smaller follow-ups in this phase (good first issues for contributors):
 
 ### Phase 4 — Structure + documentation
 
-Lands after CI is reliable and tests cover the high-risk paths.
+Has two cohorts: **doc-shaped** (safe now) and **code-shaped** (wait for
+Phase 3 high-risk module tests). Restructuring imports / runtime paths
+without test coverage is fragile, so the code-shaped cohort blocks until
+the Phase 3 priority list is in.
 
-Order matters here — restructuring imports without test coverage is fragile.
+#### Doc-shaped (safe to do in parallel with Phase 3)
 
-1. Subdir `lib/nexus/` by concern (ST1)
-2. Mirror in `test/nexus/` (ST9)
-3. Move `CHANGELOG.md` / `TODOS.md` out of repo root (ST3)
+These touch only documentation; no runtime path changes, no skill prose
+updates, no taxonomy churn.
+
+- **D1, D2** — rewrite `hosts/gemini-cli/README.md` and `hosts/factory/README.md`
+  to reflect the post-PR-#13 reality (tracked-source vs. generated-output split)
+- **§4.3 / Step #9** — add a "Windows requires WSL2" note to README/CONTRIBUTING
+- **D3, D4, D5** — fix root `README.md` drift (path descriptions, Codex install
+  path inconsistency, `.factory/skills/` description)
+- **D6, D7** — write `references/review/README.md` and `lib/nexus/README.md`
+- **D8 / Step #10 partial** — optional rename `docs/superpowers/` to a clearer
+  name (pure documentation tree reorganization)
+
+#### Code-shaped (blocked on Phase 3 test coverage)
+
+These change runtime paths or contracts. Do not start until the Phase 3
+high-risk module tests (closeout-follow-on-refresh, ship-pull-request,
+review-advisories, deploy-contract, command-runner) are in main.
+
+1. Subdir `lib/nexus/` by concern (ST1) — 50+ import paths change
+2. Mirror in `test/nexus/` (ST9) — moves alongside ST1
+3. **Move `CHANGELOG.md` / `TODOS.md` out of repo root (ST3) — NOT a doc-only
+   move**. Both are runtime artifacts referenced by skill prose and resolvers
+   (see Findings §5 ST3 row for the full reference list). Moving requires
+   updating ~12 SKILL.md.tmpl + generated SKILL.md outputs + 3 resolver files
+   + `lib/nexus/repo-taxonomy.ts` ROOT_FILES + regenerating + verifying agent
+   behavior at the new paths.
 4. Decide on `agents/openai.yaml` (ST7), `skills/root/` (ST8), and the
    single-child `lib/` directory (ST2). All three are "directory of one"
    shape — pick one resolution per directory (drop, fold, or document).
@@ -344,12 +370,7 @@ Order matters here — restructuring imports without test coverage is fragile.
 6. Rename `runtimes/safety/` → `runtimes/hooks/` (ST5) — coordinated migration
    like PR #13 attempted, due to install-path implications.
 7. Standardize `hosts/*` naming (ST6).
-8. Rewrite drifted READMEs (D1, D2, D3, D4, D5) and write missing ones
-   (D6 for `references/review/`, D7 for `lib/nexus/`).
-9. Decide cross-platform build stance (§4.3) — either add a "Windows
-   requires WSL2" note to README/CONTRIBUTING, or replace the `bash`/`chmod`
-   calls in `package.json` with cross-platform Node/Bun equivalents.
-10. Optional: rename `docs/superpowers/` (D8), group `scripts/` (ST10).
+8. Optional: group `scripts/` (ST10).
 
 ---
 

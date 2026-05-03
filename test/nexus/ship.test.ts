@@ -12,6 +12,8 @@ import {
 import { makeFakeAdapters } from './helpers/fake-adapters';
 import { runInTempRepo } from './helpers/temp-repo';
 import { resolveInvocation } from '../../lib/nexus/commands';
+import { resolveShipPullRequest } from '../../lib/nexus/ship-pull-request';
+import type { NexusCommandRunner } from '../../lib/nexus/command-runner';
 
 describe('nexus ship', () => {
   test('blocks ship when the verification matrix requires QA and no QA stage has been recorded', async () => {
@@ -1767,5 +1769,65 @@ describe('nexus ship', () => {
 
       await expect(run('ship')).rejects.toThrow('Run ledger is not canonical before ship');
     });
+  });
+
+  test('does not trust malformed GitHub PR payloads after create', async () => {
+    const commands: string[] = [];
+    let prViewCount = 0;
+    const runCommand: NexusCommandRunner = async (spec) => {
+      commands.push(spec.argv.join(' '));
+
+      if (spec.argv[0] === 'git' && spec.argv[1] === 'branch') {
+        return { exitCode: 0, stdout: 'feature/phase-3\n', stderr: '' };
+      }
+      if (spec.argv[0] === 'git' && spec.argv[1] === 'rev-parse' && spec.argv[2] === 'HEAD') {
+        return { exitCode: 0, stdout: 'abc123def456\n', stderr: '' };
+      }
+      if (spec.argv[0] === 'gh' && spec.argv[1] === 'pr' && spec.argv[2] === 'view') {
+        prViewCount += 1;
+        return {
+          exitCode: 0,
+          stdout: prViewCount === 1
+            ? '{"state":"CLOSED"}'
+            : '{"number":"not-a-number","url":"https://github.com/example/repo/pull/9","state":"OPEN"}',
+          stderr: '',
+        };
+      }
+      if (spec.argv[0] === 'gh' && spec.argv[1] === 'repo') {
+        return { exitCode: 0, stdout: 'main\n', stderr: '' };
+      }
+      if (spec.argv[0] === 'git' && spec.argv[1] === 'rev-parse' && spec.argv.includes('@{u}')) {
+        return { exitCode: 0, stdout: 'origin/feature/phase-3\n', stderr: '' };
+      }
+      if (spec.argv[0] === 'git' && spec.argv[1] === 'rev-list') {
+        return { exitCode: 0, stdout: '0\t0\n', stderr: '' };
+      }
+      if (spec.argv[0] === 'gh' && spec.argv[1] === 'pr' && spec.argv[2] === 'create') {
+        return { exitCode: 0, stdout: '', stderr: '' };
+      }
+
+      return { exitCode: 1, stdout: '', stderr: `unexpected command: ${spec.argv.join(' ')}` };
+    };
+
+    const pullRequest = await resolveShipPullRequest('/tmp/repo', true, runCommand);
+
+    expect(pullRequest).toMatchObject({
+      status: 'unavailable',
+      provider: 'github',
+      head_branch: 'feature/phase-3',
+      head_sha: 'abc123def456',
+      base_branch: 'main',
+      reason: 'gh pr view returned invalid JSON',
+    });
+    expect(commands).toEqual([
+      'git branch --show-current',
+      'git rev-parse HEAD',
+      'gh pr view --json number,url,state,headRefName,headRefOid,baseRefName',
+      'gh repo view --json defaultBranchRef -q .defaultBranchRef.name',
+      'git rev-parse --abbrev-ref --symbolic-full-name @{u}',
+      'git rev-list --left-right --count @{u}...HEAD',
+      'gh pr create --base main --head feature/phase-3 --fill',
+      'gh pr view --json number,url,state,headRefName,headRefOid,baseRefName',
+    ]);
   });
 });

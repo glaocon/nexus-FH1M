@@ -20,6 +20,23 @@ Now edit any `SKILL.md`, invoke it in Claude Code (e.g. `/review`), and see your
 bin/dev-teardown               # deactivate — back to your global install
 ```
 
+### Platform support
+
+Nexus development requires a POSIX shell environment. The build pipeline
+(`bun run build`) uses `bash`, `chmod`, and POSIX symlinks, so on Windows
+you need **WSL2**:
+
+- macOS / Linux: works out of the box.
+- Windows: use **WSL2** (Ubuntu 22.04 or newer recommended). Native Windows
+  shells (`cmd`, PowerShell) are not supported for development; the build
+  step will fail fast at `build:server` because `bash` is unavailable.
+- The runtime (browse / design CLIs, the bundled `setup` script) runs fine
+  on native Windows for end users — only contributor-side `bun run build`
+  needs WSL2.
+
+If you can't use WSL2, the Codex / Gemini paths through CCB are an
+alternative — they don't shell out to `bash` for the same operations.
+
 ## Contributor mode
 
 Contributor mode turns Nexus into a self-improving tool. Enable it and Claude Code
