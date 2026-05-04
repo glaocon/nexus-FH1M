@@ -26,6 +26,8 @@ import { readJsonFile } from './validation-helpers';
 
 const LEDGER_PATH = '.planning/nexus/current-run.json';
 
+// Convention: canonical gate checks throw in governance.ts; passive artifact
+// readers return null so callers can decide whether missing state is allowed.
 export function ledgerPath(cwd: string): string {
   return join(cwd, LEDGER_PATH);
 }

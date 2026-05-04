@@ -11,6 +11,7 @@ import type {
   WorkspaceRecord,
 } from './types';
 import { EXECUTION_MODES, PRIMARY_PROVIDERS, PROVIDER_TOPOLOGIES } from './types';
+import { isRecord } from './validation-helpers';
 
 export interface ExecutionSelection {
   mode: ExecutionMode;
@@ -83,20 +84,36 @@ function parseEnumValue<T extends string>(
   return allowed.includes(normalized as T) ? normalized as T : null;
 }
 
+function resolveCommandPath(command: string): string | null {
+  const candidates = process.platform === 'win32'
+    ? [command, `${command}.exe`, `${command}.cmd`, `${command}.bat`]
+    : [command];
+
+  for (const candidate of candidates) {
+    try {
+      const resolved = Bun.which(candidate);
+      if (resolved) {
+        return resolved;
+      }
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return null;
+}
+
 function commandExists(command: string): boolean {
-  const result = Bun.spawnSync(['which', command], {
-    stdout: 'ignore',
-    stderr: 'ignore',
-  });
-  return result.exitCode === 0;
+  return resolveCommandPath(command) !== null;
 }
 
 function mountedCcbProviders(): PrimaryProvider[] {
-  if (!commandExists('ccb-mounted')) {
+  const mountedCommand = resolveCommandPath('ccb-mounted');
+  if (!mountedCommand) {
     return [];
   }
 
-  const result = Bun.spawnSync(['ccb-mounted', '--autostart'], {
+  const result = Bun.spawnSync([mountedCommand, '--autostart'], {
     stdout: 'pipe',
     stderr: 'ignore',
   });
@@ -105,8 +122,8 @@ function mountedCcbProviders(): PrimaryProvider[] {
   }
 
   try {
-    const parsed = JSON.parse(result.stdout.toString()) as { mounted?: unknown };
-    if (!Array.isArray(parsed.mounted)) {
+    const parsed = JSON.parse(result.stdout.toString()) as unknown;
+    if (!isRecord(parsed) || !Array.isArray(parsed.mounted)) {
       return [];
     }
 

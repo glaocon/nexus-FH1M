@@ -90,7 +90,8 @@ deeper redesign — see Phase 2.3.
 `external-skills.ts:206`. Lib code shouldn't reach for ambient state — push
 defaults to CLI entry points.
 
-**Status**: Open. Phase 3 candidate.
+**Status**: Open. Phase 3 follow-up is tracked separately because it changes
+CLI/lib call contracts.
 
 #### 2.4 Throw-vs-null inconsistency
 
@@ -98,7 +99,10 @@ Same module families mix throw (`governance.ts` 26x, `adapters/local.ts` 14x)
 with silent `return null` (`ledger.ts`, `status.ts`). Pick a Result-shape or
 a documented convention.
 
-**Status**: Open. Phase 3 candidate.
+**Status**: Addressed in Phase 3 closeout. Passive artifact readers return
+`null`; governance gate assertions throw typed errors; adapter gates return
+structured blocked/unavailable records unless a required subprocess contract is
+malformed.
 
 #### 2.5 Unsafe `as` casts on subprocess output
 
@@ -106,7 +110,10 @@ a documented convention.
 `ledger-doctor.ts`, `execution-topology.ts`. External payload shape isn't
 enforced.
 
-**Status**: Open. Phase 3 candidate.
+**Status**: Addressed in Phase 3 closeout for the active subprocess parsers in
+`ship-pull-request.ts`, `execution-topology.ts`, and `adapters/ccb.ts`; the
+ledger-doctor audit metadata read now validates through `isRecord` before field
+access.
 
 #### 2.6 26x identical error message in governance
 
@@ -114,7 +121,9 @@ enforced.
 statements. Use discriminating error types or codes so callers can debug
 which check failed.
 
-**Status**: Open. Phase 3 candidate.
+**Status**: Addressed in Phase 3 closeout with `RunLedgerCanonicalError` and
+stable `RunLedgerCanonicalErrorCode` values while preserving the old
+`Run ledger is not canonical before QA/ship` message prefix for callers.
 
 ### 3. Test coverage
 
@@ -315,6 +324,12 @@ Priority order (by risk × user-visibility):
    `upstream-release-gate.test.ts`, `skill-structure.test.ts`, `qa.test.ts`)
 
 Smaller follow-ups in this phase (good first issues for contributors):
+
+Phase 3 closeout addressed the throw/null convention, subprocess JSON guards,
+governance error codes, stderr redaction, timeout bounds, auth-token rotation
+documentation, and workspace sync allowlist assertion. The `process.cwd()`
+default cleanup is tracked separately because it changes CLI/lib call
+contracts.
 
 - Push `process.cwd()` defaults to CLI entry points (§2.3)
 - Pick one return convention (throw vs null) per module family (§2.4)

@@ -36,6 +36,9 @@ const config = resolveConfig();
 ensureStateDir(config);
 
 // ─── Auth ───────────────────────────────────────────────────────
+// Intentionally per-process: clients discover the bearer token from the
+// mode-0600 state file after each server start. Persisting it across restarts
+// would extend the lifetime of stale local credentials.
 const AUTH_TOKEN = crypto.randomUUID();
 const BROWSE_PORT = parseInt(process.env.BROWSE_PORT || '0', 10);
 const IDLE_TIMEOUT_MS = parseInt(process.env.BROWSE_IDLE_TIMEOUT || '1800000', 10); // 30 min

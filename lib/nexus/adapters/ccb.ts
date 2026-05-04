@@ -31,6 +31,7 @@ import {
   readReviewAuditReceipt,
 } from '../review-receipts';
 import { reviewAttemptAuditMarkdownPath } from '../artifacts';
+import { isRecord } from '../validation-helpers';
 
 export interface CcbResolveRouteRaw {
   available: boolean;
@@ -780,14 +781,14 @@ function shouldAttemptAnonymousLateRecovery(
 }
 
 function parseMountedProviders(stdout: string): string[] {
-  let parsed: { mounted?: unknown };
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(stdout) as { mounted?: unknown };
+    parsed = JSON.parse(stdout) as unknown;
   } catch (error) {
     throw new Error(`Malformed ccb-mounted output: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  if (!Array.isArray(parsed.mounted) || !parsed.mounted.every((entry) => typeof entry === 'string')) {
+  if (!isRecord(parsed) || !Array.isArray(parsed.mounted) || !parsed.mounted.every((entry) => typeof entry === 'string')) {
     throw new Error('Malformed ccb-mounted output: expected a JSON object with a string[] mounted field');
   }
 

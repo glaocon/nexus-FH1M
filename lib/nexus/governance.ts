@@ -5,6 +5,36 @@ import { CANONICAL_COMMANDS, COMMAND_HISTORY_VIAS } from './types';
 import type { RunLedger, StageStatus } from './types';
 import { getAllowedNextStages } from './transitions';
 
+// Convention: governance functions are gate assertions. They throw typed
+// errors with stable codes when canonical state is required but absent.
+export const RUN_LEDGER_CANONICAL_ERROR_CODES = [
+  'command_history_missing',
+  'command_history_entry_shape',
+  'command_history_entry_keys',
+  'command_history_command',
+  'command_history_at',
+  'command_history_via',
+  'route_check_missing',
+  'route_check_checked_at',
+  'route_check_requested_route',
+  'route_check_validation',
+  'route_check_provider_checks',
+  'route_check_provider_check',
+  'canonical_validation_failed',
+] as const;
+
+export type RunLedgerCanonicalErrorCode = (typeof RUN_LEDGER_CANONICAL_ERROR_CODES)[number];
+
+export class RunLedgerCanonicalError extends Error {
+  readonly code: RunLedgerCanonicalErrorCode;
+
+  constructor(code: RunLedgerCanonicalErrorCode, message: string) {
+    super(message);
+    this.name = 'RunLedgerCanonicalError';
+    this.code = code;
+  }
+}
+
 export function archiveRequired(reviewStatus: StageStatus): boolean {
   return reviewStatus.state === 'completed' && reviewStatus.decision === 'audit_recorded';
 }
@@ -17,25 +47,40 @@ export function assertSameRunId(expected: string, actual: string, label: string)
 
 function assertCanonicalCommandHistoryEntry(entry: unknown): void {
   if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'command_history_entry_shape',
+      'Run ledger is not canonical (command_history_entry_shape): command history entry must be an object',
+    );
   }
 
   const keys = Object.keys(entry).sort();
   if (keys.length !== 3 || keys[0] !== 'at' || keys[1] !== 'command' || keys[2] !== 'via') {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'command_history_entry_keys',
+      'Run ledger is not canonical (command_history_entry_keys): command history entry must contain only at, command, and via',
+    );
   }
 
   const record = entry as Record<string, unknown>;
   if (!CANONICAL_COMMANDS.includes(record.command as typeof CANONICAL_COMMANDS[number])) {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'command_history_command',
+      'Run ledger is not canonical (command_history_command): command is not canonical',
+    );
   }
 
   if (typeof record.at !== 'string' || record.at.trim().length === 0) {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'command_history_at',
+      'Run ledger is not canonical (command_history_at): at must be a non-empty string',
+    );
   }
 
   if (record.via !== null && !COMMAND_HISTORY_VIAS.includes(record.via as typeof COMMAND_HISTORY_VIAS[number])) {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'command_history_via',
+      'Run ledger is not canonical (command_history_via): via must be null or a canonical invocation source',
+    );
   }
 }
 
@@ -45,20 +90,32 @@ function assertCanonicalRunLevelRouteCheck(ledger: RunLedger): void {
   }
 
   if (!ledger.route_check || typeof ledger.route_check !== 'object') {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'route_check_missing',
+      'Run ledger is not canonical (route_check_missing): governed ledgers must include route_check',
+    );
   }
 
   if (typeof ledger.route_check.checked_at !== 'string' || ledger.route_check.checked_at.trim().length === 0) {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'route_check_checked_at',
+      'Run ledger is not canonical (route_check_checked_at): route_check.checked_at must be a non-empty string',
+    );
   }
 
   if (!ledger.route_check.requested_route || typeof ledger.route_check.requested_route !== 'object') {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'route_check_requested_route',
+      'Run ledger is not canonical (route_check_requested_route): route_check.requested_route must be present',
+    );
   }
 
   const routeValidation = ledger.route_check.route_validation;
   if (!routeValidation || typeof routeValidation !== 'object') {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'route_check_validation',
+      'Run ledger is not canonical (route_check_validation): route_check.route_validation must be present',
+    );
   }
 
   if (
@@ -67,12 +124,18 @@ function assertCanonicalRunLevelRouteCheck(ledger: RunLedger): void {
     || typeof routeValidation.approved !== 'boolean'
     || typeof routeValidation.reason !== 'string'
   ) {
-    throw new Error('Run ledger is not canonical');
+    throw new RunLedgerCanonicalError(
+      'route_check_validation',
+      'Run ledger is not canonical (route_check_validation): route validation fields are malformed',
+    );
   }
 
   if (routeValidation.transport === 'ccb') {
     if (!Array.isArray(routeValidation.provider_checks) || routeValidation.provider_checks.length === 0) {
-      throw new Error('Run ledger is not canonical');
+      throw new RunLedgerCanonicalError(
+        'route_check_provider_checks',
+        'Run ledger is not canonical (route_check_provider_checks): ccb route validation requires provider checks',
+      );
     }
 
     for (const check of routeValidation.provider_checks) {
@@ -84,7 +147,10 @@ function assertCanonicalRunLevelRouteCheck(ledger: RunLedger): void {
         || typeof check.mounted !== 'boolean'
         || typeof check.reason !== 'string'
       ) {
-        throw new Error('Run ledger is not canonical');
+        throw new RunLedgerCanonicalError(
+          'route_check_provider_check',
+          'Run ledger is not canonical (route_check_provider_check): provider check is malformed',
+        );
       }
     }
   }
@@ -92,21 +158,32 @@ function assertCanonicalRunLevelRouteCheck(ledger: RunLedger): void {
 
 export function assertCanonicalTailLedger(ledger: RunLedger, label: 'QA' | 'ship'): void {
   if (!Array.isArray(ledger.command_history)) {
-    throw new Error(`Run ledger is not canonical before ${label}`);
+    throw new RunLedgerCanonicalError(
+      'command_history_missing',
+      `Run ledger is not canonical before ${label} (command_history_missing): command_history must be an array`,
+    );
   }
 
   for (const entry of ledger.command_history) {
     try {
       assertCanonicalCommandHistoryEntry(entry);
-    } catch {
-      throw new Error(`Run ledger is not canonical before ${label}`);
+    } catch (error) {
+      const code = error instanceof RunLedgerCanonicalError ? error.code : 'canonical_validation_failed';
+      throw new RunLedgerCanonicalError(
+        code,
+        `Run ledger is not canonical before ${label} (${code}): ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   try {
     assertCanonicalRunLevelRouteCheck(ledger);
-  } catch {
-    throw new Error(`Run ledger is not canonical before ${label}`);
+  } catch (error) {
+    const code = error instanceof RunLedgerCanonicalError ? error.code : 'canonical_validation_failed';
+    throw new RunLedgerCanonicalError(
+      code,
+      `Run ledger is not canonical before ${label} (${code}): ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 

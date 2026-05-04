@@ -1,6 +1,6 @@
 import { chmodSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { delimiter, join } from 'path';
 import { describe, expect, test } from 'bun:test';
 import { defaultExecutionSelection } from '../../lib/nexus/execution-topology';
 
@@ -53,6 +53,7 @@ function runSelectionWithPath(binSetup: (binDir: string) => void): unknown {
   mkdirSync(binDir, { recursive: true });
   writeFileSync(join(stateDir, 'config.yaml'), '');
   binSetup(binDir);
+  const pathValue = `${binDir}${delimiter}${process.env.PATH ?? '/bin:/usr/bin'}`;
 
   const result = Bun.spawnSync(
     [
@@ -65,7 +66,8 @@ function runSelectionWithPath(binSetup: (binDir: string) => void): unknown {
       env: {
         ...process.env,
         NEXUS_STATE_DIR: stateDir,
-        PATH: `${binDir}:${process.env.PATH ?? '/bin:/usr/bin'}`,
+        PATH: pathValue,
+        ...(process.platform === 'win32' ? { Path: pathValue } : {}),
       },
       stdout: 'pipe',
       stderr: 'pipe',
@@ -77,6 +79,19 @@ function runSelectionWithPath(binSetup: (binDir: string) => void): unknown {
     return JSON.parse(result.stdout.toString());
   } finally {
     rmSync(stateDir, { recursive: true, force: true });
+  }
+}
+
+function writeStubCommand(binDir: string, name: string, body: string): void {
+  const commandPath = join(binDir, process.platform === 'win32' ? `${name}.cmd` : name);
+  writeFileSync(
+    commandPath,
+    process.platform === 'win32'
+      ? `@echo off\r\n${body}\r\n`
+      : `#!/usr/bin/env bash\n${body}\n`,
+  );
+  if (process.platform !== 'win32') {
+    chmodSync(commandPath, 0o755);
   }
 }
 
@@ -152,13 +167,14 @@ describe('execution topology selection', () => {
 
   test('uses governed_ccb as the machine default only when required providers are mounted', () => {
     const selection = runSelectionWithPath((binDir) => {
-      writeFileSync(join(binDir, 'ask'), '#!/usr/bin/env bash\nexit 0\n');
-      writeFileSync(
-        join(binDir, 'ccb-mounted'),
-        '#!/usr/bin/env bash\nprintf \'{"cwd":"/tmp/test","mounted":["codex","gemini","claude"]}\\n\'\n',
+      writeStubCommand(binDir, 'ask', process.platform === 'win32' ? 'exit /b 0' : 'exit 0');
+      writeStubCommand(
+        binDir,
+        'ccb-mounted',
+        process.platform === 'win32'
+          ? 'echo {"cwd":"/tmp/test","mounted":["codex","gemini","claude"]}'
+          : 'printf \'{"cwd":"/tmp/test","mounted":["codex","gemini","claude"]}\\n\'',
       );
-      chmodSync(join(binDir, 'ask'), 0o755);
-      chmodSync(join(binDir, 'ccb-mounted'), 0o755);
     });
 
     expect(selection).toEqual({
@@ -171,15 +187,36 @@ describe('execution topology selection', () => {
 
   test('falls back to local_provider when CCB exists but governed providers are incomplete', () => {
     const selection = runSelectionWithPath((binDir) => {
-      writeFileSync(join(binDir, 'ask'), '#!/usr/bin/env bash\nexit 0\n');
-      writeFileSync(join(binDir, 'claude'), '#!/usr/bin/env bash\nexit 0\n');
-      writeFileSync(
-        join(binDir, 'ccb-mounted'),
-        '#!/usr/bin/env bash\nprintf \'{"cwd":"/tmp/test","mounted":["codex"]}\\n\'\n',
+      writeStubCommand(binDir, 'ask', process.platform === 'win32' ? 'exit /b 0' : 'exit 0');
+      writeStubCommand(binDir, 'claude', process.platform === 'win32' ? 'exit /b 0' : 'exit 0');
+      writeStubCommand(
+        binDir,
+        'ccb-mounted',
+        process.platform === 'win32'
+          ? 'echo {"cwd":"/tmp/test","mounted":["codex"]}'
+          : 'printf \'{"cwd":"/tmp/test","mounted":["codex"]}\\n\'',
       );
-      chmodSync(join(binDir, 'ask'), 0o755);
-      chmodSync(join(binDir, 'claude'), 0o755);
-      chmodSync(join(binDir, 'ccb-mounted'), 0o755);
+    });
+
+    expect(selection).toEqual({
+      mode: 'local_provider',
+      primary_provider: 'claude',
+      provider_topology: 'single_agent',
+      requested_execution_path: 'claude-local-single_agent',
+    });
+  });
+
+  test('falls back to local_provider when ccb-mounted JSON has the wrong shape', () => {
+    const selection = runSelectionWithPath((binDir) => {
+      writeStubCommand(binDir, 'ask', process.platform === 'win32' ? 'exit /b 0' : 'exit 0');
+      writeStubCommand(binDir, 'claude', process.platform === 'win32' ? 'exit /b 0' : 'exit 0');
+      writeStubCommand(
+        binDir,
+        'ccb-mounted',
+        process.platform === 'win32'
+          ? 'echo {"cwd":"/tmp/test","mounted":"codex"}'
+          : 'printf \'{"cwd":"/tmp/test","mounted":"codex"}\\n\'',
+      );
     });
 
     expect(selection).toEqual({

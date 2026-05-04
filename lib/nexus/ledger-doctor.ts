@@ -28,12 +28,14 @@ import {
 } from './review-receipts';
 import { readStageStatus } from './status';
 import { readVerificationMatrix } from './verification-matrix';
+import { isRecord } from './validation-helpers';
 import type { StageStatus } from './types';
 
 export const LEDGER_DOCTOR_ISSUE_CODES = [
   'history_mismatch',
   'stale_current_audits',
   'split_brain_current_audits',
+  'current_audit_read_failed',
   'stale_review_receipts',
   'stale_attached_evidence',
   'review_advisory_drift',
@@ -80,10 +82,51 @@ function parseSynthesisAuditVerdict(markdown: string, provider: 'Codex' | 'Gemin
   return verdict === 'pass' || verdict === 'fail' ? verdict : null;
 }
 
-function hasSplitBrainCurrentAudits(rootDir: string, reviewStatus: StageStatus): boolean {
+type CurrentAuditMeta = {
+  review_attempt_id?: unknown;
+  audits?: {
+    codex?: { request_id?: unknown };
+    gemini?: { request_id?: unknown };
+  };
+};
+
+type CurrentAuditConsistency =
+  | { state: 'consistent' }
+  | { state: 'split_brain' }
+  | { state: 'read_failed'; message: string };
+
+function parseAuditRequestMeta(value: unknown): { request_id?: unknown } | undefined {
+  return isRecord(value) ? { request_id: value.request_id } : undefined;
+}
+
+function readCurrentAuditMeta(path: string): CurrentAuditMeta | null {
+  const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown;
+  if (!isRecord(parsed)) {
+    return null;
+  }
+
+  const audits = isRecord(parsed.audits) ? parsed.audits : {};
+  if (typeof parsed.review_attempt_id !== 'string') {
+    return null;
+  }
+
+  return {
+    review_attempt_id: parsed.review_attempt_id,
+    audits: {
+      codex: parseAuditRequestMeta(audits.codex),
+      gemini: parseAuditRequestMeta(audits.gemini),
+    },
+  };
+}
+
+function describeUnknownError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function diagnoseCurrentAuditConsistency(rootDir: string, reviewStatus: StageStatus): CurrentAuditConsistency {
   const requiredPaths = currentAuditArtifactPaths();
   if (!requiredPaths.every((path) => existsSync(join(rootDir, path)))) {
-    return true;
+    return { state: 'split_brain' };
   }
 
   try {
@@ -91,13 +134,10 @@ function hasSplitBrainCurrentAudits(rootDir: string, reviewStatus: StageStatus):
     const geminiMarkdown = readFileSync(join(rootDir, '.planning/audits/current/gemini.md'), 'utf8');
     const gateDecisionMarkdown = readFileSync(join(rootDir, '.planning/audits/current/gate-decision.md'), 'utf8');
     const synthesisMarkdown = readFileSync(join(rootDir, '.planning/audits/current/synthesis.md'), 'utf8');
-    const meta = JSON.parse(readFileSync(join(rootDir, '.planning/audits/current/meta.json'), 'utf8')) as {
-      review_attempt_id?: unknown;
-      audits?: {
-        codex?: { request_id?: unknown };
-        gemini?: { request_id?: unknown };
-      };
-    };
+    const meta = readCurrentAuditMeta(join(rootDir, '.planning/audits/current/meta.json'));
+    if (!meta) {
+      return { state: 'split_brain' };
+    }
 
     const codexVerdict = parseAuditVerdict(codexMarkdown);
     const geminiVerdict = parseAuditVerdict(geminiMarkdown);
@@ -141,9 +181,12 @@ function hasSplitBrainCurrentAudits(rootDir: string, reviewStatus: StageStatus):
       inconsistencies.push('gemini_request_id_mismatch');
     }
 
-    return inconsistencies.length > 0;
-  } catch {
-    return true;
+    return inconsistencies.length > 0 ? { state: 'split_brain' } : { state: 'consistent' };
+  } catch (error) {
+    return {
+      state: 'read_failed',
+      message: `Failed to read current audit artifacts: ${describeUnknownError(error)}`,
+    };
   }
 }
 
@@ -380,11 +423,24 @@ export function buildLedgerDoctorReport(rootDir: string): LedgerDoctorReport {
     });
   }
 
-  if (
+  const currentAuditConsistency = shouldDiagnoseCloseoutHistory(ledger?.current_stage)
+    && currentAuditArtifacts.length > 0
+    && reviewStatus
+    && isCanonicalRecordedReview(reviewStatus, ledger?.run_id ?? null)
+    ? diagnoseCurrentAuditConsistency(rootDir, reviewStatus)
+    : null;
+
+  if (currentAuditConsistency?.state === 'read_failed') {
+    issues.push({
+      code: 'current_audit_read_failed',
+      message: currentAuditConsistency.message,
+      evidence: [stageStatusPath('review'), ...currentAuditArtifactPaths()],
+    });
+  } else if (
     shouldDiagnoseCloseoutHistory(ledger?.current_stage)
     && currentAuditArtifacts.length > 0
     && isCanonicalRecordedReview(reviewStatus, ledger?.run_id ?? null)
-    && hasSplitBrainCurrentAudits(rootDir, reviewStatus)
+    && currentAuditConsistency?.state === 'split_brain'
   ) {
     issues.push({
       code: 'split_brain_current_audits',

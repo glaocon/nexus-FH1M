@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { describe, expect, test } from 'bun:test';
 import {
@@ -15,6 +16,61 @@ import {
 import { applySafeLedgerDoctorFix, buildLedgerDoctorReport } from '../../lib/nexus/ledger-doctor';
 import { buildReviewAuditReceiptRecord, persistReviewAuditReceipt } from '../../lib/nexus/review-receipts';
 import { runInTempRepo } from './helpers/temp-repo';
+
+function writeRepoFile(cwd: string, path: string, content: string): void {
+  const absolutePath = join(cwd, path);
+  mkdirSync(dirname(absolutePath), { recursive: true });
+  writeFileSync(absolutePath, content);
+}
+
+function writeRepoJson(cwd: string, path: string, value: unknown): void {
+  writeRepoFile(cwd, path, JSON.stringify(value, null, 2) + '\n');
+}
+
+function writeCanonicalCurrentAuditFixture(cwd: string, metaJson: string): void {
+  writeRepoJson(cwd, '.planning/nexus/current-run.json', {
+    run_id: 'run-123',
+    status: 'active',
+    current_command: 'review',
+    current_stage: 'review',
+    previous_stage: 'build',
+    allowed_next_stages: ['qa'],
+    command_history: [
+      { command: 'plan', at: '2026-04-30T00:00:00.000Z', via: null },
+      { command: 'handoff', at: '2026-04-30T00:01:00.000Z', via: null },
+      { command: 'build', at: '2026-04-30T00:02:00.000Z', via: null },
+      { command: 'review', at: '2026-04-30T00:03:00.000Z', via: null },
+    ],
+    artifact_index: {},
+    execution: { mode: 'local_provider' },
+    route_intent: {},
+  });
+  writeRepoJson(cwd, '.planning/current/review/status.json', {
+    run_id: 'run-123',
+    stage: 'review',
+    state: 'completed',
+    decision: 'audit_recorded',
+    ready: true,
+    review_complete: true,
+    audit_set_complete: true,
+    provenance_consistent: true,
+    gate_decision: 'pass',
+    review_attempt_id: 'review-123',
+    audit_request_ids: {
+      codex: 'codex-request-123',
+      gemini: 'gemini-request-123',
+    },
+  });
+  writeRepoFile(cwd, '.planning/audits/current/codex.md', '# Codex Audit\n\nResult: pass\n');
+  writeRepoFile(cwd, '.planning/audits/current/gemini.md', '# Gemini Audit\n\nResult: pass\n');
+  writeRepoFile(cwd, '.planning/audits/current/gate-decision.md', 'Gate: pass\n');
+  writeRepoFile(
+    cwd,
+    '.planning/audits/current/synthesis.md',
+    'Codex audit result: pass\nGemini audit result: pass\n',
+  );
+  writeRepoFile(cwd, '.planning/audits/current/meta.json', metaJson);
+}
 
 describe('nexus ledger doctor', () => {
   test('reports clean for a canonical completed review history', async () => {
@@ -182,6 +238,41 @@ describe('nexus ledger doctor', () => {
         '.planning/audits/current/meta.json',
       ]));
     });
+  });
+
+  test('reports split-brain current audits when current audit metadata has invalid shape', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'nexus-ledger-doctor-invalid-meta-'));
+    try {
+      writeCanonicalCurrentAuditFixture(cwd, '[]');
+      const splitBrainIssue = buildLedgerDoctorReport(cwd).issues.find((issue) => issue.code === 'split_brain_current_audits');
+      expect(splitBrainIssue).toMatchObject({
+        code: 'split_brain_current_audits',
+      });
+      expect(splitBrainIssue?.evidence).toEqual(expect.arrayContaining([
+        '.planning/current/review/status.json',
+        '.planning/audits/current/meta.json',
+      ]));
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('reports current audit read failures with a distinct issue code', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'nexus-ledger-doctor-read-failure-'));
+    try {
+      writeCanonicalCurrentAuditFixture(cwd, '{not valid json');
+      const readFailureIssue = buildLedgerDoctorReport(cwd).issues.find((issue) => issue.code === 'current_audit_read_failed');
+      expect(readFailureIssue).toMatchObject({
+        code: 'current_audit_read_failed',
+        message: expect.stringContaining('Failed to read current audit artifacts'),
+      });
+      expect(readFailureIssue?.evidence).toEqual(expect.arrayContaining([
+        '.planning/current/review/status.json',
+        '.planning/audits/current/meta.json',
+      ]));
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
   });
 
   test('reports stale review receipts when a superseded attempt lands after the current review completed', async () => {
