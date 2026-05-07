@@ -14,7 +14,7 @@ import {
   skillSourceCategoryForName,
   targetSkillSourcePathForName,
 } from '../../lib/nexus/skill-structure';
-import { discoverTemplates } from '../../scripts/discover-skills';
+import { discoverTemplates } from '../../scripts/skill/discover-skills';
 
 const ROOT = path.resolve(import.meta.dir, '..', '..');
 

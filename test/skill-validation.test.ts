@@ -3,7 +3,7 @@ import { validateSkill, extractRemoteSlugPatterns, extractWeightsFromTable } fro
 import { readSkill, skillArtifactPath } from './helpers/skill-paths';
 import { ALL_COMMANDS, COMMAND_DESCRIPTIONS, READ_COMMANDS, WRITE_COMMANDS, META_COMMANDS } from '../runtimes/browse/src/commands';
 import { SNAPSHOT_FLAGS } from '../runtimes/browse/src/snapshot';
-import { discoverTemplates } from '../scripts/discover-skills';
+import { discoverTemplates } from '../scripts/skill/discover-skills';
 import { skillNameFromSourcePath } from '../lib/nexus/skill-structure';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -25,6 +25,19 @@ const NEXUS_WRAPPER_SKILLS = new Set([
   'autoplan',
 ]);
 const LEGACY_NEXUS_ALIASES = new Set(['office-hours', 'plan-ceo-review', 'plan-eng-review', 'autoplan']);
+const HAS_BASH = commandAvailable('bash');
+
+function commandAvailable(command: string, args = ['--version']): boolean {
+  try {
+    return Bun.spawnSync([command, ...args], { stdout: 'pipe', stderr: 'pipe' }).exitCode === 0;
+  } catch {
+    return false;
+  }
+}
+
+function normalizeNewlines(content: string): string {
+  return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
 
 function isNexusWrapperSkill(skill: string): boolean {
   return NEXUS_WRAPPER_SKILLS.has(skill);
@@ -334,6 +347,7 @@ describe('Update check preamble', () => {
   });
 
   test('update check bash block exits 0 when up to date', () => {
+    if (!HAS_BASH) return;
     // Simulate the exact preamble command from SKILL.md
     const result = Bun.spawnSync(['bash', '-c',
       '_UPD=$(echo "" || true); [ -n "$_UPD" ] && echo "$_UPD" || true'
@@ -342,6 +356,7 @@ describe('Update check preamble', () => {
   });
 
   test('update check bash block exits 0 when upgrade available', () => {
+    if (!HAS_BASH) return;
     const result = Bun.spawnSync(['bash', '-c',
       '_UPD=$(echo "UPGRADE_AVAILABLE 0.3.3 0.4.0" || true); [ -n "$_UPD" ] && echo "$_UPD" || true'
     ], { stdout: 'pipe', stderr: 'pipe' });
@@ -490,7 +505,7 @@ describe('Nexus wrapper skill validation', () => {
   });
 
   test('docs/skills.md presents absorbed systems as internal sources, not primary front doors', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'docs', 'skills.md'), 'utf-8');
+    const content = normalizeNewlines(fs.readFileSync(path.join(ROOT, 'docs', 'skills.md'), 'utf-8'));
 
     // PR #130 (Track D-D3 closeout) rewrote the skills.md opening to combine
     // "only command surface" with "lifecycle authority" in a single sentence;
@@ -1133,14 +1148,24 @@ describeLegacyFrameAliases('CEO review mode validation', () => {
 describe('nexus-slug', () => {
   const SLUG_BIN = path.join(ROOT, 'bin', 'nexus-slug');
 
+  function runNexusSlug(): ReturnType<typeof Bun.spawnSync> | null {
+    if (process.platform === 'win32') {
+      if (!HAS_BASH) return null;
+      return Bun.spawnSync(['bash', '-lc', './bin/nexus-slug'], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+    }
+    return Bun.spawnSync([SLUG_BIN], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+  }
+
   test('binary exists and is executable', () => {
     expect(fs.existsSync(SLUG_BIN)).toBe(true);
+    if (process.platform === 'win32') return;
     const stat = fs.statSync(SLUG_BIN);
     expect(stat.mode & 0o111).toBeGreaterThan(0);
   });
 
   test('outputs SLUG and BRANCH lines in a git repo', () => {
-    const result = Bun.spawnSync([SLUG_BIN], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+    const result = runNexusSlug();
+    if (!result) return;
     expect(result.exitCode).toBe(0);
     const output = result.stdout.toString();
     expect(output).toContain('SLUG=');
@@ -1148,21 +1173,24 @@ describe('nexus-slug', () => {
   });
 
   test('SLUG does not contain forward slashes', () => {
-    const result = Bun.spawnSync([SLUG_BIN], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+    const result = runNexusSlug();
+    if (!result) return;
     const slug = result.stdout.toString().match(/SLUG=(.*)/)?.[1] ?? '';
     expect(slug).not.toContain('/');
     expect(slug.length).toBeGreaterThan(0);
   });
 
   test('BRANCH does not contain forward slashes', () => {
-    const result = Bun.spawnSync([SLUG_BIN], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+    const result = runNexusSlug();
+    if (!result) return;
     const branch = result.stdout.toString().match(/BRANCH=(.*)/)?.[1] ?? '';
     expect(branch).not.toContain('/');
     expect(branch.length).toBeGreaterThan(0);
   });
 
   test('output is eval-compatible (KEY=VALUE format)', () => {
-    const result = Bun.spawnSync([SLUG_BIN], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+    const result = runNexusSlug();
+    if (!result) return;
     const lines = result.stdout.toString().trim().split('\n');
     expect(lines.length).toBe(2);
     expect(lines[0]).toMatch(/^SLUG=.+/);
@@ -1170,7 +1198,8 @@ describe('nexus-slug', () => {
   });
 
   test('output values contain only safe characters (no shell metacharacters)', () => {
-    const result = Bun.spawnSync([SLUG_BIN], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' });
+    const result = runNexusSlug();
+    if (!result) return;
     const slug = result.stdout.toString().match(/SLUG=(.*)/)?.[1] ?? '';
     const branch = result.stdout.toString().match(/BRANCH=(.*)/)?.[1] ?? '';
     // Only alphanumeric, dot, dash, underscore are allowed (#133)
@@ -1178,6 +1207,7 @@ describe('nexus-slug', () => {
     expect(branch).toMatch(/^[a-zA-Z0-9._-]+$/);
   });
   test('eval sets variables under bash with set -euo pipefail', () => {
+    if (!HAS_BASH) return;
     const result = Bun.spawnSync(
       ['bash', '-c', 'set -euo pipefail; eval "$(./bin/nexus-slug 2>/dev/null)"; echo "SLUG=$SLUG"; echo "BRANCH=$BRANCH"'],
       { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' }
@@ -1189,6 +1219,7 @@ describe('nexus-slug', () => {
   });
 
   test('no templates or bin scripts use source process substitution for nexus-slug', () => {
+    if (!commandAvailable('grep')) return;
     const result = Bun.spawnSync(
       ['grep', '-r', 'source <(.*nexus-slug', '--include=*.tmpl', '--include=gstack-review-*', '.'],
       { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' }
@@ -1564,7 +1595,7 @@ describe('Codex skill', () => {
 
   test('codex-host ship/review do NOT contain adversarial review step', () => {
     // .agents/ is gitignored — generate on demand
-    Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'codex'], {
+    Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'codex'], {
       cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
     });
     const shipContent = fs.readFileSync(path.join(ROOT, '.agents', 'skills', 'nexus-ship', 'SKILL.md'), 'utf-8');
@@ -1678,7 +1709,7 @@ describe('Codex skill validation', () => {
   const AGENTS_DIR = path.join(ROOT, '.agents', 'skills');
 
   // .agents/ is gitignored (v0.11.2.0) — generate on demand for tests
-  Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'codex'], {
+  Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'codex'], {
     cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
   });
 

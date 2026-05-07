@@ -5,7 +5,7 @@ import {
   skillNameFromSourcePath,
   type SkillArtifactFileName,
 } from '../../lib/nexus/skill-structure';
-import { discoverSkillFiles } from '../../scripts/discover-skills';
+import { discoverSkillFiles } from '../../scripts/skill/discover-skills';
 
 function fallbackArtifactPath(nameOrDir: string, fileName: SkillArtifactFileName): string {
   if (nameOrDir === '.' || nameOrDir === 'nexus' || nameOrDir === '') {

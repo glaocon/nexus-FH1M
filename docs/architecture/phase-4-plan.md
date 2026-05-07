@@ -56,10 +56,10 @@ From `docs/architecture/post-audit-cleanup-plan.md` § Phase 4 code-shaped:
 | ST4 | Split `bin/` source from built artifacts | Move `.ts` entry files to `lib/nexus/cli/` or `runtimes/cli/` |
 | ST5 | Rename hook helper runtime directory to `runtimes/hooks/` | Coordinated migration; install-path implications |
 | ST6 | Standardize `hosts/*` naming | Tied to Track D D1 |
-| ST7 | Decide on `agents/openai.yaml` (single-child) | Drop, fold, or document |
-| ST8 | Decide on `skills/root/` (single-child shape) | Drop, fold, or document |
+| ST7 | Decide on `agents/openai.yaml` (single-child) | Done: documented compatibility surface in `agents/README.md` |
+| ST8 | Decide on `skills/root/` (single-child shape) | Done: documented root-entrypoint taxonomy in `skills/root/README.md` |
 | ST9 | Mirror `test/nexus/` subdir | Moves alongside ST1 |
-| ST10 | Optional: group `scripts/` | Lowest priority |
+| ST10 | Optional: group `scripts/` | Done: grouped active entrypoints by concern |
 
 ### Track B — Phase 3 review follow-ups
 
@@ -302,9 +302,9 @@ These can be done at any time during 4.1-4.3 as filler:
 - ST2 `lib/` single-child decision (drop, fold, or document)
 - ST4 split `bin/` source from built artifacts
 - ST6 standardize `hosts/*` naming (combine with D1)
-- ST7 decide `agents/openai.yaml`
-- ST8 decide `skills/root/`
-- ST10 group `scripts/`
+- ST7 documented `agents/openai.yaml` compatibility surface
+- ST8 documented `skills/root/` root-entrypoint taxonomy
+- ST10 grouped active `scripts/` entrypoints
 
 Each is independently small (≤2h). Bundle 2-3 into Codex batches when
 opportunity allows.
@@ -392,9 +392,9 @@ the PR description. Mark items as ☑ here when their PR merges.
 - [ ] ST2 lib/ single-child (#83)
 - [x] ST3 CHANGELOG/TODOS (#84) — RFC done; **decision: stay in root** (`track-c-st3-rfc.md`); doc note added to `repo-taxonomy-v2.md`
 - [ ] ST4 split bin/ (#85)
-- [ ] ST7 agents/openai.yaml (#86)
-- [ ] ST8 skills/root single-child (#87)
-- [ ] ST10 group scripts/ (#88)
+- [x] ST7 agents/openai.yaml (#86) - documented compatibility-only surface
+- [x] ST8 skills/root single-child (#87) - documented root-entrypoint taxonomy
+- [x] ST10 group scripts/ (#88) - grouped active script entrypoints
 - [ ] Doc refresh: context-diagram.md (#89) — post-D2
 - [ ] Doc refresh: repo-taxonomy-v2.md (#90) — post-D2
 

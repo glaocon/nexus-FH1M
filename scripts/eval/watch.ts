@@ -11,7 +11,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { getPrimaryDevRoot } from '../lib/nexus/support-surface';
+import { getPrimaryDevRoot } from '../../lib/nexus/support-surface';
 
 const HOME_DIR = os.homedir();
 const PRIMARY_DEV_DIR = getPrimaryDevRoot(HOME_DIR);

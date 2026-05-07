@@ -6,13 +6,13 @@
  * validates all $B commands immediately.
  */
 
-import { validateSkill } from '../test/helpers/skill-parser';
+import { validateSkill } from '../../test/helpers/skill-parser';
 import { discoverTemplates } from './discover-skills';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, '..', '..');
 
 const TEMPLATES = discoverTemplates(ROOT).map(t => ({
   tmpl: path.join(ROOT, t.tmpl),
@@ -22,7 +22,7 @@ const TEMPLATES = discoverTemplates(ROOT).map(t => ({
 function regenerateAndValidate() {
   // Regenerate
   try {
-    execSync('bun run scripts/gen-skill-docs.ts', { cwd: ROOT, stdio: 'pipe' });
+    execSync('bun run scripts/skill/gen-skill-docs.ts', { cwd: ROOT, stdio: 'pipe' });
   } catch (err: any) {
     console.log(`  [gen]   ERROR: ${err.stderr?.toString().trim() || err.message}`);
     return;
@@ -67,8 +67,8 @@ for (const { tmpl } of TEMPLATES) {
 
 // Also watch commands.ts and snapshot.ts (source of truth changes)
 const SOURCE_FILES = [
-  path.join(ROOT, 'browse', 'src', 'commands.ts'),
-  path.join(ROOT, 'browse', 'src', 'snapshot.ts'),
+  path.join(ROOT, 'runtimes', 'browse', 'src', 'commands.ts'),
+  path.join(ROOT, 'runtimes', 'browse', 'src', 'snapshot.ts'),
 ];
 
 for (const src of SOURCE_FILES) {

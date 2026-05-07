@@ -7,7 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { skillNameFromSourcePath } from '../lib/nexus/skill-structure';
+import { skillNameFromSourcePath } from '../../lib/nexus/skill-structure';
 
 const SKIP = new Set(['node_modules', '.git', 'dist']);
 const STRUCTURED_SKILL_CATEGORIES = ['root', 'canonical', 'support', 'safety', 'aliases'];

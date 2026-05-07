@@ -8,20 +8,20 @@
  *   - Freshness check (generated files match committed files)
  */
 
-import { validateSkill } from '../test/helpers/skill-parser';
+import { validateSkill } from '../../test/helpers/skill-parser';
 import { discoverTemplates, discoverSkillFiles } from './discover-skills';
-import { analyzeSkillFile, type SkillAnatomyResult } from './skill-anatomy';
-import { buildSkillDoctorReport, readSkillDoctorTargets, renderSkillDoctorReport } from './skill-doctor';
+import { analyzeSkillFile, type SkillAnatomyResult } from './anatomy';
+import { buildSkillDoctorReport, readSkillDoctorTargets, renderSkillDoctorReport } from './doctor';
 import {
   describeSkillSourcePath,
   type SkillStructureCategory,
-} from '../lib/nexus/skill-structure';
-import { projectHostSkillInstallRoot } from '../lib/nexus/host-roots';
+} from '../../lib/nexus/skill-structure';
+import { projectHostSkillInstallRoot } from '../../lib/nexus/host-roots';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, '..', '..');
 
 // Find all SKILL.md files (dynamic discovery — no hardcoded list)
 const SKILL_FILES = discoverSkillFiles(ROOT);
@@ -300,7 +300,7 @@ if (fs.existsSync(GEMINI_DIR)) {
 
 console.log('\n  Freshness (Claude):');
 try {
-  execSync('bun run scripts/gen-skill-docs.ts --dry-run', { cwd: ROOT, stdio: 'pipe' });
+  execSync('bun run scripts/skill/gen-skill-docs.ts --dry-run', { cwd: ROOT, stdio: 'pipe' });
   console.log('  \u2705 All Claude generated files are fresh');
 } catch (err: any) {
   hasErrors = true;
@@ -314,7 +314,7 @@ try {
 
 console.log('\n  Freshness (Codex):');
 try {
-  execSync('bun run scripts/gen-skill-docs.ts --host codex --dry-run', { cwd: ROOT, stdio: 'pipe' });
+  execSync('bun run scripts/skill/gen-skill-docs.ts --host codex --dry-run', { cwd: ROOT, stdio: 'pipe' });
   console.log('  \u2705 All Codex generated files are fresh');
 } catch (err: any) {
   hasErrors = true;
@@ -328,7 +328,7 @@ try {
 
 console.log('\n  Freshness (Factory):');
 try {
-  execSync('bun run scripts/gen-skill-docs.ts --host factory --dry-run', { cwd: ROOT, stdio: 'pipe' });
+  execSync('bun run scripts/skill/gen-skill-docs.ts --host factory --dry-run', { cwd: ROOT, stdio: 'pipe' });
   console.log('  \u2705 All Factory generated files are fresh');
 } catch (err: any) {
   hasErrors = true;
@@ -342,7 +342,7 @@ try {
 
 console.log('\n  Freshness (Gemini CLI):');
 try {
-  execSync('bun run scripts/gen-skill-docs.ts --host gemini-cli --dry-run', { cwd: ROOT, stdio: 'pipe' });
+  execSync('bun run scripts/skill/gen-skill-docs.ts --host gemini-cli --dry-run', { cwd: ROOT, stdio: 'pipe' });
   console.log('  \u2705 All Gemini CLI generated files are fresh');
 } catch (err: any) {
   hasErrors = true;

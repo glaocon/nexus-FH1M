@@ -179,12 +179,12 @@ table:
 `.agents/`, `.factory/`, `.gemini/` are all in the taxonomy as `future_move`
 entries but their mirrors are not consistently checked:
 
-- `scripts/skill-check.ts:189-217` checks `.agents/skills/`
-- `scripts/skill-check.ts:221-248` checks `.factory/skills/`
+- `scripts/skill/check.ts:189-217` checks `.agents/skills/`
+- `scripts/skill/check.ts:221-248` checks `.factory/skills/`
 - **No `.gemini/skills/` check** — silent monitoring gap
 
 **Status**: Open → **Phase 1.5** (small one-off fix). Add `.gemini/skills/`
-check to `scripts/skill-check.ts`.
+check to `scripts/skill/check.ts`.
 
 #### 4.4 Host coverage gap in `defaultExternalSkillRoots`
 
@@ -204,7 +204,7 @@ now follows `HOST_SKILL_INSTALL_ROOTS`, including Gemini CLI and Factory.
 #### 4.3 Cross-platform build undocumented
 
 `package.json` `build:server` requires `bash`, `build:chmod` requires
-`chmod`. PR #13's `scripts/build.ts` rewrite makes the failure mode clearer
+`chmod`. PR #13's `scripts/build/index.ts` rewrite makes the failure mode clearer
 on Windows, but there's no README/CONTRIBUTING note that Windows requires
 WSL2.
 
@@ -221,12 +221,12 @@ build-script rewrite).
 | ST4 | Medium | `bin/` mixes TypeScript source (`nexus.ts`, `nexus-global-discover.ts`) and built binaries. | Move `.ts` sources to `lib/nexus/cli/` and build into `bin/`. |
 | ST5 | Medium | Hook helper runtime naming collides with `skills/safety/` (skill defs). | Rename to `runtimes/hooks/`. |
 | ST6 | Low | `hosts/claude/` vs `hosts/gemini-cli/` inconsistent suffix. | Standardize on suffix or no-suffix across hosts. |
-| ST7 | Low | `agents/` at root is a directory of one (`openai.yaml`). | Drop the directory or document why. |
-| ST8 | Low | `skills/root/` has exactly one subdir. | Fold into `canonical/` with a flag, or rename to make the asymmetry intentional. |
+| ST7 | Low | `agents/` at root is a directory of one (`openai.yaml`). | **Addressed**: documented as a Codex/OpenAI metadata compatibility surface in `agents/README.md`; active source remains `hosts/codex/openai.yaml`. |
+| ST8 | Low | `skills/root/` has exactly one subdir. | **Addressed**: documented as an intentional root-entrypoint taxonomy bucket in `skills/root/README.md`. |
 | ST9 | Low | `test/nexus/` is also flat (117 tests). | Mirror the eventual `lib/nexus/` subdirs. |
-| ST10 | Low | `scripts/` has `eval-*` (5), `skill-*` (3), `upstream-*` (2) prefix clusters. | Optional grouping under `scripts/eval/`, `scripts/skill/`, `scripts/upstream/`. |
+| ST10 | Low | `scripts/` has `eval-*` (5), `skill-*` (3), `upstream-*` (2) prefix clusters. | **Addressed**: grouped active script entrypoints under `scripts/build/`, `scripts/skill/`, `scripts/repo/`, and `scripts/eval/`; kept shared resolvers in `scripts/resolvers/`. |
 
-**Status**: All open. Phase 4 candidate (after Phases 1–3 stabilize).
+**Status**: ST7, ST8, and ST10 are addressed. Remaining structure items stay Phase 4 candidates.
 
 ### 6. Documentation drift
 
@@ -256,7 +256,7 @@ without consolidation entrenches duplication.
 Small, targeted patches that unblock everything else.
 
 - ✅ Fix two `git push` shell-injection sites (S1, S2)
-- ✅ Fix build script false-pass (rewrite as `scripts/build.ts` with proper exit
+- ✅ Fix build script false-pass (rewrite as `scripts/build/index.ts` with proper exit
   propagation + try/finally cleanup) — *done in PR #13*
 - ✅ Gate fork-PR CI workflow so build-image doesn't fail with permission errors
 
@@ -267,7 +267,7 @@ Small, targeted patches that unblock everything else.
 One-off fixes that fit naturally with Phase 1's "stop the bleeding" theme but
 weren't on the original Phase 1 scope.
 
-- 🔲 Add `.gemini/skills/` existence check to `scripts/skill-check.ts`
+- 🔲 Add `.gemini/skills/` existence check to `scripts/skill/check.ts`
   (parallel to the existing `.agents/` and `.factory/` checks). Closes
   finding §4.2. ~5 lines.
 
@@ -375,16 +375,17 @@ review-advisories, deploy-contract, command-runner) are in main.
    updating ~12 SKILL.md.tmpl + generated SKILL.md outputs + 3 resolver files
    + `lib/nexus/repo-taxonomy.ts` ROOT_FILES + regenerating + verifying agent
    behavior at the new paths.
-4. Decide on `agents/openai.yaml` (ST7), `skills/root/` (ST8), and the
-   single-child `lib/` directory (ST2). All three are "directory of one"
-   shape — pick one resolution per directory (drop, fold, or document).
+4. Decide on the single-child `lib/` directory (ST2). ST7 and ST8 are closed
+   by documenting `agents/` as compatibility-only and `skills/root/` as the
+   root-entrypoint taxonomy bucket.
 5. Split `bin/` source from built artifacts (ST4) — move the `.ts` entry
    files into `lib/nexus/cli/` or `runtimes/cli/` and have `bin/` contain
    only built/shipped binaries.
 6. Rename hook helper runtime directory to `runtimes/hooks/` (ST5) — coordinated migration
    like PR #13 attempted, due to install-path implications.
 7. Standardize `hosts/*` naming (ST6).
-8. Optional: group `scripts/` (ST10).
+8. ST10 is closed: script entrypoints are grouped by concern while
+   `scripts/resolvers/` remains the shared template-resolver concern.
 
 ---
 

@@ -2,11 +2,11 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { classifyRepoPath, type RepoPathClassification } from '../lib/nexus/repo-taxonomy';
+import { classifyRepoPath, type RepoPathClassification } from '../../lib/nexus/repo-taxonomy';
 
-const ROOT = join(import.meta.dir, '..');
+const ROOT = join(import.meta.dir, '..', '..');
 const OUTPUT_PATH = 'docs/architecture/repo-path-inventory.md';
-const SELF_PATH = 'scripts/repo-path-inventory.ts';
+const SELF_PATH = 'scripts/repo/path-inventory.ts';
 
 function gitLsFiles(): string[] {
   const result = Bun.spawnSync(['git', 'ls-files'], { cwd: ROOT });
@@ -92,7 +92,7 @@ const outputAbs = join(ROOT, OUTPUT_PATH);
 if (process.argv.includes('--check')) {
   const existing = existsSync(outputAbs) ? readFileSync(outputAbs, 'utf8') : '';
   if (existing !== content) {
-    console.error(`${OUTPUT_PATH} is stale. Run: bun run scripts/repo-path-inventory.ts`);
+    console.error(`${OUTPUT_PATH} is stale. Run: bun run scripts/repo/path-inventory.ts`);
     process.exit(1);
   }
   console.log(`${OUTPUT_PATH} is up to date`);

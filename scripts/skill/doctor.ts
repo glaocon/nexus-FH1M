@@ -1,17 +1,17 @@
 #!/usr/bin/env bun
 import * as fs from 'fs';
 import * as path from 'path';
-import { CANONICAL_MANIFEST } from '../lib/nexus/command-manifest';
+import { CANONICAL_MANIFEST } from '../../lib/nexus/command-manifest';
 import {
   skillNameFromSourcePath,
   skillSourceCategoryForName,
   type SkillStructureCategory,
-} from '../lib/nexus/skill-structure';
+} from '../../lib/nexus/skill-structure';
 import {
   analyzeSkillAnatomy,
   type SkillAnatomyCategory,
   type SkillAnatomyResult,
-} from './skill-anatomy';
+} from './anatomy';
 import { discoverSkillFiles, discoverTemplates } from './discover-skills';
 
 export type SkillDoctorIssueKind =
@@ -447,7 +447,7 @@ export function readSkillDoctorTargets(root: string): SkillDoctorTarget[] {
 }
 
 if (import.meta.main) {
-  const root = path.resolve(import.meta.dir, '..');
+  const root = path.resolve(import.meta.dir, '..', '..');
   const json = process.argv.includes('--json');
   const strict = process.env.NEXUS_SKILL_DOCTOR_STRICT === '1';
   const threshold = Number(process.env.NEXUS_SKILL_DOCTOR_MAX_LINES ?? DEFAULT_LONG_SKILL_LINE_THRESHOLD);

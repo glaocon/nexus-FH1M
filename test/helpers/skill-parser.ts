@@ -6,8 +6,8 @@
  *
  * Used by:
  *   - test/skill-validation.test.ts (Tier 1 static tests)
- *   - scripts/skill-check.ts (health summary)
- *   - scripts/dev-skill.ts (watch mode)
+ *   - scripts/skill/check.ts (health summary)
+ *   - scripts/skill/dev-skill.ts (watch mode)
  */
 
 import { ALL_COMMANDS } from '../../runtimes/browse/src/commands';

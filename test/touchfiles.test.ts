@@ -115,7 +115,7 @@ describe('selectTests', () => {
   });
 
   test('gen-skill-docs.ts is a scoped touchfile, not global', () => {
-    const result = selectTests(['scripts/gen-skill-docs.ts'], E2E_TOUCHFILES);
+    const result = selectTests(['scripts/skill/gen-skill-docs.ts'], E2E_TOUCHFILES);
     // Should select tests that list gen-skill-docs.ts in their touchfiles, not ALL tests
     expect(result.selected.length).toBeGreaterThan(0);
     expect(result.selected.length).toBeLessThan(Object.keys(E2E_TOUCHFILES).length);

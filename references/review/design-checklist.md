@@ -1,6 +1,6 @@
 # Design Review Checklist (Lite)
 
-> **Subset of DESIGN_METHODOLOGY** — when adding items here, also update `generateDesignMethodology()` in `scripts/gen-skill-docs.ts`, and vice versa.
+> **Subset of DESIGN_METHODOLOGY** — when adding items here, also update `generateDesignMethodology()` in `scripts/skill/gen-skill-docs.ts`, and vice versa.
 
 ## Instructions
 

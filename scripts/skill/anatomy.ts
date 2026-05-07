@@ -4,7 +4,7 @@ import {
   skillNameFromSourcePath,
   skillSourceCategoryForName,
   type SkillStructureCategory,
-} from '../lib/nexus/skill-structure';
+} from '../../lib/nexus/skill-structure';
 
 export type SkillAnatomyCategory = 'root' | 'canonical' | 'alias' | 'support';
 export type SkillAnatomyStatus = 'pass' | 'warn' | 'fail';

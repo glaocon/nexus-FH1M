@@ -2,10 +2,10 @@
 paths:
   - "SKILL.md.tmpl"
   - "**/SKILL.md.tmpl"
-  - "scripts/gen-skill-docs.ts"
+  - "scripts/skill/gen-skill-docs.ts"
   - "scripts/resolvers/**/*.ts"
   - ".agents/skills/**/*.md"
-  - "scripts/skill-check.ts"
+  - "scripts/skill/check.ts"
   - "setup"
 ---
 

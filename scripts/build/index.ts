@@ -1,5 +1,5 @@
 import { spawnSync } from 'child_process';
-import { cleanupBunBuildArtifacts } from './build-cleanup';
+import { cleanupBunBuildArtifacts } from './cleanup';
 
 type BuildStep = {
   name: string;

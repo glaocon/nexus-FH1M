@@ -16,7 +16,7 @@ provider-side configuration) will land here as they are added.
 ## How output reaches Factory users
 
 1. Maintainer runs `bun run gen:skill-docs --host factory`.
-2. `scripts/gen-skill-docs.ts` reads each `.tmpl` source, applies
+2. `scripts/skill/gen-skill-docs.ts` reads each `.tmpl` source, applies
    Factory-specific frontmatter rules (name + description + `user-invocable`,
    plus `disable-model-invocation` when the source carries `sensitive: true`),
    translates Claude-Code tool names to host-agnostic phrasing, and writes to
@@ -29,7 +29,7 @@ provider-side configuration) will land here as they are added.
 `.factory/skills/` is generator output, not source. Committing it would
 create two divergent sources of truth (template vs. generated file) and let
 drift slip in. The generator is the single source; the freshness gate in
-`scripts/skill-check.ts` enforces this on every change.
+`scripts/skill/check.ts` enforces this on every change.
 
 ## Sensitive-flag handling
 
@@ -45,4 +45,4 @@ skills on explicit user request, never on model-driven inference.
 - `hosts/gemini-cli/README.md` — sibling host facade for Gemini CLI.
 - `lib/nexus/repo-taxonomy.ts` — canonical record of which paths are
   source-of-truth vs. compatibility surfaces.
-- `scripts/gen-skill-docs.ts:194-200` — the Factory frontmatter transform.
+- `scripts/skill/gen-skill-docs.ts:194-200` — the Factory frontmatter transform.

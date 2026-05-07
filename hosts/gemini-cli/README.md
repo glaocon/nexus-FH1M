@@ -16,7 +16,7 @@ provider-side configuration) will land here as they are added.
 ## How output reaches Gemini CLI users
 
 1. Maintainer runs `bun run gen:skill-docs --host gemini-cli`.
-2. `scripts/gen-skill-docs.ts` reads each `.tmpl` source, applies
+2. `scripts/skill/gen-skill-docs.ts` reads each `.tmpl` source, applies
    Gemini-specific frontmatter rules (name + description only, 1024-char
    description limit), and writes to `.gemini/skills/<name>/SKILL.md`.
 3. On install, `setup` copies the generated `.gemini/skills/` tree into the
@@ -27,7 +27,7 @@ provider-side configuration) will land here as they are added.
 `.gemini/skills/` is generator output, not source. Committing it would create
 two divergent sources of truth (template vs. generated file) and let drift
 slip in. The generator is the single source; the freshness gate in
-`scripts/skill-check.ts` enforces this on every change.
+`scripts/skill/check.ts` enforces this on every change.
 
 ## Related
 

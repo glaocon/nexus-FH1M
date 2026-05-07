@@ -97,7 +97,8 @@ export const REPO_TAXONOMY_CATEGORIES: Record<RepoTaxonomyCategory, RepoTaxonomy
   },
   scripts: {
     root: 'scripts',
-    description: 'Repository maintenance scripts, generators, and resolvers.',
+    description: 'Repository maintenance scripts, grouped by build, skill, repo, eval, and resolver concerns.',
+    children: ['build', 'skill', 'repo', 'eval', 'resolvers'],
   },
   docs: {
     root: 'docs',
@@ -314,6 +315,15 @@ export const REPO_TAXONOMY_ENTRIES: RepoTaxonomyEntry[] = [
     runtime_compat_paths: ['agents/openai.yaml'],
   },
   {
+    name: 'codex-openai-metadata-compat-root',
+    category: 'hosts',
+    current_path: 'agents',
+    target_path: 'agents',
+    move_policy: 'compat_required',
+    risk_level: 'low',
+    rationale: 'The root agents/ directory is retained only as a Codex/OpenAI metadata compatibility surface; active source remains under hosts/codex.',
+  },
+  {
     name: 'codex-openai-metadata-compat',
     category: 'hosts',
     current_path: 'agents/openai.yaml',
@@ -524,7 +534,7 @@ export const REPO_TAXONOMY_FACADES: RepoTaxonomyFacade[] = [
     facade_path: 'hosts/codex/README.md',
     category: 'hosts',
     kind: 'navigation_only',
-    active_source_paths: ['hosts/codex/openai.yaml', 'agents/openai.yaml'],
+    active_source_paths: ['hosts/codex/openai.yaml', 'agents/openai.yaml', 'agents/README.md'],
     note: 'Codex host facade. Root OpenAI metadata lives under hosts/codex while generated skill output remains under .agents.',
   },
   {

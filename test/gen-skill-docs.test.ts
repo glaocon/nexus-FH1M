@@ -3,13 +3,17 @@ import { COMMAND_DESCRIPTIONS } from '../runtimes/browse/src/commands';
 import { SNAPSHOT_FLAGS } from '../runtimes/browse/src/snapshot';
 import { CANONICAL_MANIFEST, LEGACY_ALIASES } from '../lib/nexus/command-manifest';
 import { skillNameFromSourcePath } from '../lib/nexus/skill-structure';
-import { discoverTemplates } from '../scripts/discover-skills';
+import { discoverTemplates } from '../scripts/skill/discover-skills';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const MAX_SKILL_DESCRIPTION_LENGTH = 1024;
+
+function normalizeNewlines(content: string): string {
+  return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
 
 function extractDescription(content: string): string {
   const fmEnd = content.indexOf('\n---', 4);
@@ -266,7 +270,7 @@ describe('gen-skill-docs', () => {
   });
 
   test('command table is sorted alphabetically within categories', () => {
-    const content = readSkill('browse');
+    const content = normalizeNewlines(readSkill('browse'));
     // Extract command names from the Navigation section as a test
     const navSection = content.match(/### Navigation\n\|.*\n\|.*\n([\s\S]*?)(?=\n###|\n## )/);
     expect(navSection).not.toBeNull();
@@ -340,7 +344,7 @@ describe('gen-skill-docs', () => {
 
   test('every generated SKILL.md has valid YAML frontmatter', () => {
     for (const skill of ALL_SKILLS) {
-      const content = fs.readFileSync(path.join(ROOT, skill.output), 'utf-8');
+      const content = normalizeNewlines(fs.readFileSync(path.join(ROOT, skill.output), 'utf-8'));
       expect(content.startsWith('---\n')).toBe(true);
       expect(content).toContain('name:');
       expect(content).toContain('description:');
@@ -393,7 +397,7 @@ describe('gen-skill-docs', () => {
   });
 
   test('generated files are fresh (match --dry-run)', () => {
-    const result = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--dry-run'], {
+    const result = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--dry-run'], {
       cwd: ROOT,
       stdout: 'pipe',
       stderr: 'pipe',
@@ -402,7 +406,7 @@ describe('gen-skill-docs', () => {
     const output = result.stdout.toString();
     // Every skill should be FRESH
     for (const skill of ALL_SKILLS) {
-      expect(output).toContain(`FRESH: ${skill.output}`);
+      expect(output).toContain(`FRESH: ${skill.output.replace(/\\/g, '/')}`);
     }
     expect(output).not.toContain('STALE');
   });
@@ -2060,7 +2064,7 @@ describe('Codex generation (--host codex)', () => {
   const AGENTS_DIR = path.join(ROOT, '.agents', 'skills');
 
   // .agents/ is gitignored (v0.11.2.0) — generate on demand for tests
-  Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'codex'], {
+  Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'codex'], {
     cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
   });
 
@@ -2103,9 +2107,13 @@ describe('Codex generation (--host codex)', () => {
     const hostRootMetadata = path.join(ROOT, 'hosts', 'codex', 'openai.yaml');
     expect(fs.existsSync(rootMetadata)).toBe(true);
     expect(fs.existsSync(hostRootMetadata)).toBe(true);
-    expect(fs.lstatSync(rootMetadata).isSymbolicLink()).toBe(true);
-    const content = fs.readFileSync(rootMetadata, 'utf-8');
+    const rootMetadataStat = fs.lstatSync(rootMetadata);
+    const rootMetadataText = fs.readFileSync(rootMetadata, 'utf-8').trim().replace(/\\/g, '/');
+    const rootMetadataTarget = path.relative(path.dirname(rootMetadata), hostRootMetadata).replace(/\\/g, '/');
     const hostContent = fs.readFileSync(hostRootMetadata, 'utf-8');
+    const isMetadataLink = rootMetadataStat.isSymbolicLink() || rootMetadataText === rootMetadataTarget;
+    expect(isMetadataLink).toBe(true);
+    const content = rootMetadataStat.isSymbolicLink() ? fs.readFileSync(rootMetadata, 'utf-8') : hostContent;
     expect(content).toContain('display_name: "nexus"');
     expect(content).toContain('Use $nexus to locate the bundled Nexus skills.');
     expect(content).toContain('allow_implicit_invocation: true');
@@ -2122,7 +2130,7 @@ describe('Codex generation (--host codex)', () => {
 
   test('Codex frontmatter has ONLY name + description', () => {
     for (const skill of CODEX_SKILLS) {
-      const content = fs.readFileSync(path.join(AGENTS_DIR, skill.codexName, 'SKILL.md'), 'utf-8');
+      const content = normalizeNewlines(fs.readFileSync(path.join(AGENTS_DIR, skill.codexName, 'SKILL.md'), 'utf-8'));
       expect(content.startsWith('---\n')).toBe(true);
       const fmEnd = content.indexOf('\n---', 4);
       expect(fmEnd).toBeGreaterThan(0);
@@ -2178,7 +2186,7 @@ describe('Codex generation (--host codex)', () => {
   });
 
   test('--host codex --dry-run freshness', () => {
-    const result = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'codex', '--dry-run'], {
+    const result = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'codex', '--dry-run'], {
       cwd: ROOT,
       stdout: 'pipe',
       stderr: 'pipe',
@@ -2193,12 +2201,12 @@ describe('Codex generation (--host codex)', () => {
   });
 
   test('--host agents alias produces same output as --host codex', () => {
-    const codexResult = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'codex', '--dry-run'], {
+    const codexResult = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'codex', '--dry-run'], {
       cwd: ROOT,
       stdout: 'pipe',
       stderr: 'pipe',
     });
-    const agentsResult = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'agents', '--dry-run'], {
+    const agentsResult = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'agents', '--dry-run'], {
       cwd: ROOT,
       stdout: 'pipe',
       stderr: 'pipe',
@@ -2407,7 +2415,7 @@ describe('Factory generation (--host factory)', () => {
   const FACTORY_DIR = path.join(ROOT, '.factory', 'skills');
 
   // Generate Factory output for tests
-  Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'factory'], {
+  Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'factory'], {
     cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
   });
 
@@ -2508,10 +2516,10 @@ describe('Factory generation (--host factory)', () => {
   });
 
   test('--host droid alias works', () => {
-    const factoryResult = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'factory', '--dry-run'], {
+    const factoryResult = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'factory', '--dry-run'], {
       cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
     });
-    const droidResult = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'droid', '--dry-run'], {
+    const droidResult = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'droid', '--dry-run'], {
       cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
     });
     expect(factoryResult.exitCode).toBe(0);
@@ -2520,7 +2528,7 @@ describe('Factory generation (--host factory)', () => {
   });
 
   test('--host factory --dry-run freshness', () => {
-    const result = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'factory', '--dry-run'], {
+    const result = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'factory', '--dry-run'], {
       cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
     });
     expect(result.exitCode).toBe(0);
@@ -2544,7 +2552,7 @@ describe('Factory generation (--host factory)', () => {
 describe('Gemini CLI generation (--host gemini-cli)', () => {
   const GEMINI_DIR = path.join(ROOT, '.gemini', 'skills');
 
-  Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'gemini-cli'], {
+  Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'gemini-cli'], {
     cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
   });
 
@@ -2577,10 +2585,10 @@ describe('Gemini CLI generation (--host gemini-cli)', () => {
   });
 
   test('--host gemini alias matches --host gemini-cli', () => {
-    const geminiCliResult = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'gemini-cli', '--dry-run'], {
+    const geminiCliResult = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'gemini-cli', '--dry-run'], {
       cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
     });
-    const geminiResult = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'gemini', '--dry-run'], {
+    const geminiResult = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'gemini', '--dry-run'], {
       cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
     });
     expect(geminiCliResult.exitCode).toBe(0);
@@ -2594,7 +2602,7 @@ describe('Gemini CLI generation (--host gemini-cli)', () => {
 
 describe('--host all', () => {
   test('--host all generates for claude, codex, factory, and gemini-cli', () => {
-    const result = Bun.spawnSync(['bun', 'run', 'scripts/gen-skill-docs.ts', '--host', 'all', '--dry-run'], {
+    const result = Bun.spawnSync(['bun', 'run', 'scripts/skill/gen-skill-docs.ts', '--host', 'all', '--dry-run'], {
       cwd: ROOT, stdout: 'pipe', stderr: 'pipe',
     });
     expect(result.exitCode).toBe(0);
@@ -3057,7 +3065,7 @@ describe('discover-skills hidden directory filtering', () => {
       fs.mkdirSync(path.join(tmpDir, 'visible'), { recursive: true });
       fs.writeFileSync(path.join(tmpDir, 'visible', 'SKILL.md.tmpl'), '---\nname: good\n---\ntest');
 
-      const { discoverTemplates } = require('../scripts/discover-skills');
+      const { discoverTemplates } = require('../scripts/skill/discover-skills');
       const results = discoverTemplates(tmpDir);
       const dirs = results.map((r: { tmpl: string }) => r.tmpl);
 
@@ -3145,7 +3153,7 @@ describe('discover-skills hidden directory filtering', () => {
       fs.mkdirSync(path.join(tmpDir, 'skills', 'support', 'browse'), { recursive: true });
       fs.writeFileSync(path.join(tmpDir, 'skills', 'support', 'browse', 'SKILL.md'), '---\nname: browse\n---\nbrowse');
 
-      const { discoverSkillFiles } = await import('../scripts/discover-skills');
+      const { discoverSkillFiles } = await import('../scripts/skill/discover-skills');
       expect(discoverSkillFiles(tmpDir)).toContain('skills/support/browse/SKILL.md');
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -3305,7 +3313,7 @@ describe('codex commands must not use inline $(git rev-parse --show-toplevel) fo
     ...fs.readdirSync(path.join(ROOT, 'scripts/resolvers'))
       .filter(f => f.endsWith('.ts'))
       .map(f => `scripts/resolvers/${f}`),
-    'scripts/gen-skill-docs.ts',
+    'scripts/skill/gen-skill-docs.ts',
   ];
 
   test('no codex exec command uses inline $(git rev-parse --show-toplevel) in -C flag', () => {
@@ -3356,7 +3364,7 @@ describe('codex commands must not use inline $(git rev-parse --show-toplevel) fo
       ...fs.readdirSync(path.join(ROOT, 'scripts/resolvers'))
         .filter(f => f.endsWith('.ts'))
         .map(f => `scripts/resolvers/${f}`),
-      'scripts/gen-skill-docs.ts',
+      'scripts/skill/gen-skill-docs.ts',
     ];
     const violations: string[] = [];
     for (const rel of allFiles) {
@@ -3501,7 +3509,7 @@ describe('gen-skill-docs prefix warning (#620/#578)', () => {
       fs.mkdirSync(fakeNexus, { recursive: true });
       fs.writeFileSync(path.join(fakeNexus, 'config.yaml'), 'skill_prefix: true\n');
 
-      const output = execSync('bun run scripts/gen-skill-docs.ts', {
+      const output = execSync('bun run scripts/skill/gen-skill-docs.ts', {
         cwd: ROOT,
         env: { ...process.env, HOME: fakeHome },
         encoding: 'utf-8',
@@ -3522,7 +3530,7 @@ describe('gen-skill-docs prefix warning (#620/#578)', () => {
       fs.mkdirSync(fakeNexus, { recursive: true });
       fs.writeFileSync(path.join(fakeNexus, 'config.yaml'), 'skill_prefix: false\n');
 
-      const output = execSync('bun run scripts/gen-skill-docs.ts', {
+      const output = execSync('bun run scripts/skill/gen-skill-docs.ts', {
         cwd: ROOT,
         env: { ...process.env, HOME: fakeHome },
         encoding: 'utf-8',

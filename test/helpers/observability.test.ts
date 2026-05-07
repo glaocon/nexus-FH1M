@@ -12,8 +12,8 @@ import * as path from 'path';
 import * as os from 'os';
 import { sanitizeTestName } from './session-runner';
 import { EvalCollector } from './eval-store';
-import { renderDashboard } from '../../scripts/eval-watch';
-import type { HeartbeatData, PartialData } from '../../scripts/eval-watch';
+import { renderDashboard } from '../../scripts/eval/watch';
+import type { HeartbeatData, PartialData } from '../../scripts/eval/watch';
 
 let tmpDir: string;
 

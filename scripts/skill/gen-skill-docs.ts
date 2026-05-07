@@ -9,17 +9,17 @@
  * Used by skill:check and CI freshness checks.
  */
 
-import { COMMAND_DESCRIPTIONS } from '../runtimes/browse/src/commands';
-import { SNAPSHOT_FLAGS } from '../runtimes/browse/src/snapshot';
+import { COMMAND_DESCRIPTIONS } from '../../runtimes/browse/src/commands';
+import { SNAPSHOT_FLAGS } from '../../runtimes/browse/src/snapshot';
 import { discoverTemplates } from './discover-skills';
 import * as fs from 'fs';
 import * as path from 'path';
-import type { Host, TemplateContext } from './resolvers/types';
-import { HOST_PATHS } from './resolvers/types';
-import { RESOLVERS } from './resolvers/index';
-import { generatePlanCompletionAuditShip, generatePlanCompletionAuditReview, generatePlanVerificationExec } from './resolvers/review';
+import type { Host, TemplateContext } from '../resolvers/types';
+import { HOST_PATHS } from '../resolvers/types';
+import { RESOLVERS } from '../resolvers/index';
+import { generatePlanCompletionAuditShip, generatePlanCompletionAuditReview, generatePlanVerificationExec } from '../resolvers/review';
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, '..', '..');
 const DRY_RUN = process.argv.includes('--dry-run');
 
 // ─── Host Detection ─────────────────────────────────────────
@@ -40,7 +40,7 @@ const HOST_ARG_VAL: HostArg = (() => {
 // For single-host mode, HOST is the host. For --host all, it's set per iteration below.
 let HOST: Host = HOST_ARG_VAL === 'all' ? 'claude' : HOST_ARG_VAL;
 
-// HostPaths, HOST_PATHS, and TemplateContext imported from ./resolvers/types (line 7-8)
+// HostPaths, HOST_PATHS, and TemplateContext imported from ../resolvers/types.
 
 // ─── Shared Design Constants ────────────────────────────────
 
@@ -331,10 +331,24 @@ function processExternalHost(
     if (host === 'codex' && name === 'nexus') {
       const rootAgentsDir = path.join(ROOT, 'agents');
       fs.mkdirSync(rootAgentsDir, { recursive: true });
-      fs.writeFileSync(path.join(rootAgentsDir, 'openai.yaml'), metadata);
       const futureCodexHostDir = path.join(ROOT, 'hosts', 'codex');
       fs.mkdirSync(futureCodexHostDir, { recursive: true });
-      fs.writeFileSync(path.join(futureCodexHostDir, 'openai.yaml'), metadata);
+      const hostMetadataPath = path.join(futureCodexHostDir, 'openai.yaml');
+      fs.writeFileSync(hostMetadataPath, metadata);
+
+      const rootMetadataPath = path.join(rootAgentsDir, 'openai.yaml');
+      const rootMetadataTarget = path.relative(rootAgentsDir, hostMetadataPath).replace(/\\/g, '/');
+      let preservesHostMetadataLink = false;
+      try {
+        const rootMetadataStat = fs.lstatSync(rootMetadataPath);
+        preservesHostMetadataLink = rootMetadataStat.isSymbolicLink()
+          || fs.readFileSync(rootMetadataPath, 'utf-8').trim().replace(/\\/g, '/') === rootMetadataTarget;
+      } catch {
+        preservesHostMetadataLink = false;
+      }
+      if (!preservesHostMetadataLink) {
+        fs.writeFileSync(rootMetadataPath, metadata);
+      }
     }
   }
 
@@ -444,6 +458,14 @@ function findTemplates(): string[] {
   return discoverTemplates(ROOT).map(t => path.join(ROOT, t.tmpl));
 }
 
+function repoRelativePath(filePath: string): string {
+  return path.relative(ROOT, filePath).replace(/\\/g, '/');
+}
+
+function normalizeGeneratedContent(content: string): string {
+  return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
 function cleanupLegacyExternalHostOutputs(host: Host): void {
   if (DRY_RUN || host === 'claude') return;
 
@@ -483,13 +505,16 @@ for (const currentHost of hostsToRun) {
       const primaryOutput = processTemplate(tmplPath, currentHost);
       const outputs = [primaryOutput, ...compatibilityOutputsForTemplate(tmplPath, currentHost, primaryOutput)];
 
-      for (const { outputPath, content, symlinkLoop } of outputs) {
-        const relOutput = path.relative(ROOT, outputPath);
+      for (const { outputPath, content: rawContent, symlinkLoop } of outputs) {
+        const content = normalizeGeneratedContent(rawContent);
+        const relOutput = repoRelativePath(outputPath);
 
         if (symlinkLoop) {
           console.log(`SKIPPED (symlink loop): ${relOutput}`);
         } else if (DRY_RUN) {
-          const existing = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf-8') : '';
+          const existing = fs.existsSync(outputPath)
+            ? normalizeGeneratedContent(fs.readFileSync(outputPath, 'utf-8'))
+            : '';
           if (existing !== content) {
             console.log(`STALE: ${relOutput}`);
             hasChanges = true;

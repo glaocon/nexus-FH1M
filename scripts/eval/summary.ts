@@ -7,8 +7,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import type { EvalResult } from '../test/helpers/eval-store';
-import { getProjectEvalDir } from '../test/helpers/eval-store';
+import type { EvalResult } from '../../test/helpers/eval-store';
+import { getProjectEvalDir } from '../../test/helpers/eval-store';
 
 const EVAL_DIR = getProjectEvalDir('read');
 

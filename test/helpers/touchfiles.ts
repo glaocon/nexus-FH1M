@@ -84,12 +84,12 @@ export const E2E_TOUCHFILES: Record<string, string[]> = {
   'browse-snapshot': ['runtimes/browse/src/**', 'runtimes/browse/test/test-server.ts'],
 
   // SKILL.md setup + preamble (depend on ROOT SKILL.md + gen-skill-docs)
-  'skillmd-setup-discovery':  ['SKILL.md', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'skillmd-no-local-binary':  ['SKILL.md', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'skillmd-outside-git':      ['SKILL.md', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
+  'skillmd-setup-discovery':  ['SKILL.md', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'skillmd-no-local-binary':  ['SKILL.md', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'skillmd-outside-git':      ['SKILL.md', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
 
-  'contributor-mode':           ['SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'session-awareness':        ['SKILL.md', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
+  'contributor-mode':           ['SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'session-awareness':        ['SKILL.md', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
 
   // QA (+ test-server dependency)
   'qa-quick':       ['qa/**', 'references/qa/**', 'bin/nexus.ts', 'lib/nexus/**', 'runtimes/browse/src/**', 'runtimes/browse/test/test-server.ts'],
@@ -116,28 +116,28 @@ export const E2E_TOUCHFILES: Record<string, string[]> = {
   'review-army-consensus':        ['review/**', 'references/review/**', 'scripts/resolvers/review-army.ts'],
 
   // Office Hours
-  'office-hours-spec-review':  ['office-hours/**', 'discover/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/gen-skill-docs.ts'],
+  'office-hours-spec-review':  ['office-hours/**', 'discover/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/skill/gen-skill-docs.ts'],
 
   // Plan reviews
   'plan-ceo-review':           ['plan-ceo-review/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**'],
   'plan-ceo-review-selective': ['plan-ceo-review/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**'],
-  'plan-ceo-review-benefits':  ['plan-ceo-review/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/gen-skill-docs.ts'],
+  'plan-ceo-review-benefits':  ['plan-ceo-review/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/skill/gen-skill-docs.ts'],
   'plan-eng-review':           ['plan-eng-review/**', 'plan/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**'],
   'plan-eng-review-artifact':  ['plan-eng-review/**', 'plan/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**'],
-  'plan-review-report':        ['plan-eng-review/**', 'plan/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/gen-skill-docs.ts'],
+  'plan-review-report':        ['plan-eng-review/**', 'plan/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/skill/gen-skill-docs.ts'],
 
   // Codex offering verification
-  'codex-offered-office-hours':  ['office-hours/**', 'discover/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/gen-skill-docs.ts'],
-  'codex-offered-ceo-review':    ['plan-ceo-review/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/gen-skill-docs.ts'],
-  'codex-offered-design-review': ['plan-design-review/**', 'scripts/gen-skill-docs.ts'],
-  'codex-offered-eng-review':    ['plan-eng-review/**', 'plan/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/gen-skill-docs.ts'],
+  'codex-offered-office-hours':  ['office-hours/**', 'discover/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/skill/gen-skill-docs.ts'],
+  'codex-offered-ceo-review':    ['plan-ceo-review/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/skill/gen-skill-docs.ts'],
+  'codex-offered-design-review': ['plan-design-review/**', 'scripts/skill/gen-skill-docs.ts'],
+  'codex-offered-eng-review':    ['plan-eng-review/**', 'plan/**', 'frame/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/skill/gen-skill-docs.ts'],
 
   // Ship
   'ship-base-branch': ['ship/**', 'bin/nexus.ts', 'lib/nexus/**', 'bin/nexus-repo-mode'],
-  'ship-local-workflow': ['ship/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/gen-skill-docs.ts'],
+  'ship-local-workflow': ['ship/**', 'bin/nexus.ts', 'lib/nexus/**', 'scripts/skill/gen-skill-docs.ts'],
   'review-dashboard-via': ['ship/**', 'scripts/resolvers/review.ts', 'codex/**', 'autoplan/**', 'land-and-deploy/**'],
-  'ship-plan-completion': ['ship/**', 'scripts/gen-skill-docs.ts'],
-  'ship-plan-verification': ['ship/**', 'scripts/gen-skill-docs.ts'],
+  'ship-plan-completion': ['ship/**', 'scripts/skill/gen-skill-docs.ts'],
+  'ship-plan-verification': ['ship/**', 'scripts/skill/gen-skill-docs.ts'],
 
   // Retro
   'retro':             ['retro/**'],
@@ -176,19 +176,19 @@ export const E2E_TOUCHFILES: Record<string, string[]> = {
   'ship-triage': ['ship/**', 'bin/nexus-repo-mode'],
 
   // Plan completion audit + verification
-  'ship-plan-completion': ['ship/**', 'scripts/gen-skill-docs.ts'],
-  'ship-plan-verification': ['ship/**', 'qa-only/**', 'scripts/gen-skill-docs.ts'],
+  'ship-plan-completion': ['ship/**', 'scripts/skill/gen-skill-docs.ts'],
+  'ship-plan-verification': ['ship/**', 'qa-only/**', 'scripts/skill/gen-skill-docs.ts'],
   'ship-idempotency':       ['ship/**', 'scripts/resolvers/utility.ts'],
-  'review-plan-completion': ['review/**', 'references/review/**', 'scripts/gen-skill-docs.ts'],
+  'review-plan-completion': ['review/**', 'references/review/**', 'scripts/skill/gen-skill-docs.ts'],
 
   // Design
-  'design-consultation-core':       ['design-consultation/**', 'references/design/**', 'scripts/gen-skill-docs.ts', 'test/helpers/llm-judge.ts'],
-  'design-consultation-existing':   ['design-consultation/**', 'references/design/**', 'scripts/gen-skill-docs.ts'],
-  'design-consultation-research':   ['design-consultation/**', 'references/design/**', 'scripts/gen-skill-docs.ts'],
-  'design-consultation-preview':    ['design-consultation/**', 'references/design/**', 'scripts/gen-skill-docs.ts'],
-  'plan-design-review-plan-mode':   ['plan-design-review/**', 'references/design/**', 'scripts/gen-skill-docs.ts'],
-  'plan-design-review-no-ui-scope': ['plan-design-review/**', 'references/design/**', 'scripts/gen-skill-docs.ts'],
-  'design-review-fix':              ['design-review/**', 'references/design/**', 'runtimes/browse/src/**', 'scripts/gen-skill-docs.ts'],
+  'design-consultation-core':       ['design-consultation/**', 'references/design/**', 'scripts/skill/gen-skill-docs.ts', 'test/helpers/llm-judge.ts'],
+  'design-consultation-existing':   ['design-consultation/**', 'references/design/**', 'scripts/skill/gen-skill-docs.ts'],
+  'design-consultation-research':   ['design-consultation/**', 'references/design/**', 'scripts/skill/gen-skill-docs.ts'],
+  'design-consultation-preview':    ['design-consultation/**', 'references/design/**', 'scripts/skill/gen-skill-docs.ts'],
+  'plan-design-review-plan-mode':   ['plan-design-review/**', 'references/design/**', 'scripts/skill/gen-skill-docs.ts'],
+  'plan-design-review-no-ui-scope': ['plan-design-review/**', 'references/design/**', 'scripts/skill/gen-skill-docs.ts'],
+  'design-review-fix':              ['design-review/**', 'references/design/**', 'runtimes/browse/src/**', 'scripts/skill/gen-skill-docs.ts'],
 
   // Design Shotgun
   'design-shotgun-path':            ['design-shotgun/**', 'runtimes/design/src/**', 'references/design/**', 'scripts/resolvers/design.ts'],
@@ -199,12 +199,12 @@ export const E2E_TOUCHFILES: Record<string, string[]> = {
   'nexus-upgrade-happy-path': ['nexus-upgrade/**', 'nexus-upgrade/**'],
 
   // Deploy skills
-  'land-and-deploy-workflow':      ['land-and-deploy/**', 'scripts/gen-skill-docs.ts'],
-  'land-and-deploy-first-run':     ['land-and-deploy/**', 'scripts/gen-skill-docs.ts', 'bin/nexus-slug'],
+  'land-and-deploy-workflow':      ['land-and-deploy/**', 'scripts/skill/gen-skill-docs.ts'],
+  'land-and-deploy-first-run':     ['land-and-deploy/**', 'scripts/skill/gen-skill-docs.ts', 'bin/nexus-slug'],
   'land-and-deploy-review-gate':   ['land-and-deploy/**', 'bin/nexus-review-read'],
   'canary-workflow':               ['canary/**', 'runtimes/browse/src/**'],
   'benchmark-workflow':            ['benchmark/**', 'runtimes/browse/src/**'],
-  'setup-deploy-workflow':         ['setup-deploy/**', 'scripts/gen-skill-docs.ts'],
+  'setup-deploy-workflow':         ['setup-deploy/**', 'scripts/skill/gen-skill-docs.ts'],
 
   // Sidebar agent
   'sidebar-navigate':              ['runtimes/browse/src/server.ts', 'runtimes/browse/src/sidebar-agent.ts', 'runtimes/browse/src/sidebar-utils.ts', 'runtimes/browse/extension/**'],
@@ -215,16 +215,16 @@ export const E2E_TOUCHFILES: Record<string, string[]> = {
   'autoplan-core':  ['autoplan/**', 'plan/**', 'frame/**', 'plan-ceo-review/**', 'plan-eng-review/**', 'plan-design-review/**', 'bin/nexus.ts', 'lib/nexus/**'],
 
   // Skill routing — journey-stage tests (depend on ALL skill descriptions)
-  'journey-ideation':       ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'journey-plan-eng':       ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'journey-debug':          ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'journey-qa':             ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'journey-code-review':    ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'journey-ship':           ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'journey-docs':           ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'journey-retro':          ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'journey-design-system':  ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'journey-visual-qa':      ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
+  'journey-ideation':       ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'journey-plan-eng':       ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'journey-debug':          ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'journey-qa':             ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'journey-code-review':    ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'journey-ship':           ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'journey-docs':           ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'journey-retro':          ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'journey-design-system':  ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'journey-visual-qa':      ['*/SKILL.md.tmpl', 'SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
 };
 
 /**
@@ -397,8 +397,8 @@ export const LLM_JUDGE_TOUCHFILES: Record<string, string[]> = {
   'design-consultation/SKILL.md research': ['design-consultation/SKILL.md', 'design-consultation/SKILL.md.tmpl', 'references/design/**'],
 
   // Office Hours
-  'office-hours/SKILL.md spec review':    ['office-hours/SKILL.md', 'office-hours/SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
-  'office-hours/SKILL.md design sketch':  ['office-hours/SKILL.md', 'office-hours/SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
+  'office-hours/SKILL.md spec review':    ['office-hours/SKILL.md', 'office-hours/SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
+  'office-hours/SKILL.md design sketch':  ['office-hours/SKILL.md', 'office-hours/SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
 
   // Deploy skills
   'land-and-deploy/SKILL.md workflow':    ['land-and-deploy/SKILL.md', 'land-and-deploy/SKILL.md.tmpl'],
@@ -412,7 +412,7 @@ export const LLM_JUDGE_TOUCHFILES: Record<string, string[]> = {
   'nexus-upgrade/SKILL.md upgrade flow': ['nexus-upgrade/SKILL.md', 'nexus-upgrade/SKILL.md.tmpl'],
 
   // Voice directive
-  'voice directive tone':                 ['scripts/resolvers/preamble.ts', 'review/SKILL.md', 'review/SKILL.md.tmpl', 'scripts/gen-skill-docs.ts'],
+  'voice directive tone':                 ['scripts/resolvers/preamble.ts', 'review/SKILL.md', 'review/SKILL.md.tmpl', 'scripts/skill/gen-skill-docs.ts'],
 };
 
 /**

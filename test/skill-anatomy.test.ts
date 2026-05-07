@@ -3,7 +3,7 @@ import {
   analyzeSkillAnatomy,
   classifySkillPath,
   SUPPORT_SKILL_RUBRIC,
-} from '../scripts/skill-anatomy';
+} from '../scripts/skill/anatomy';
 
 const completeSupportSkill = `---
 name: demo-support

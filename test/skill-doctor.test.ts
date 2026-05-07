@@ -6,7 +6,7 @@ import {
   buildSkillDoctorReport,
   readSkillDoctorTargets,
   renderSkillDoctorReport,
-} from '../scripts/skill-doctor';
+} from '../scripts/skill/doctor';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 
@@ -245,7 +245,7 @@ Do not touch unrelated files.
   });
 
   test('cli emits json output and strict mode fails on warnings', () => {
-    const jsonResult = spawnSync(process.execPath, ['run', 'scripts/skill-doctor.ts', '--json'], {
+    const jsonResult = spawnSync(process.execPath, ['run', 'scripts/skill/doctor.ts', '--json'], {
       cwd: ROOT,
       encoding: 'utf8',
       env: {
@@ -263,7 +263,7 @@ Do not touch unrelated files.
     });
     expect(parsed.report.warnCount).toBeGreaterThan(0);
 
-    const strictResult = spawnSync(process.execPath, ['run', 'scripts/skill-doctor.ts'], {
+    const strictResult = spawnSync(process.execPath, ['run', 'scripts/skill/doctor.ts'], {
       cwd: ROOT,
       encoding: 'utf8',
       env: {

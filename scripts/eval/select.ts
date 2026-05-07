@@ -16,9 +16,9 @@ import {
   E2E_TOUCHFILES,
   LLM_JUDGE_TOUCHFILES,
   GLOBAL_TOUCHFILES,
-} from '../test/helpers/touchfiles';
+} from '../../test/helpers/touchfiles';
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, '..', '..');
 const args = process.argv.slice(2);
 const jsonMode = args.includes('--json');
 const baseIdx = args.indexOf('--base');

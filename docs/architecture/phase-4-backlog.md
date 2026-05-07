@@ -116,11 +116,11 @@ small, opportunistic.
 | #83 | ST2: decide single-child `lib/` | S (~30 min) | None |
 | ~~#84~~ | ~~ST3: move CHANGELOG.md / TODOS.md~~ — **✅ Resolved**: RFC chose Option A (stay in root); doc note landed in `repo-taxonomy-v2.md` | done | `track-c-st3-rfc.md` |
 | #85 | ST4: split `bin/` source vs built | S (~1h) | None |
-| #86 | ST7: decide `agents/openai.yaml` single-child | S (~15-30 min) | None |
-| #87 | ST8: decide `skills/root/` single-child | S (~30-60 min) | None — ⚠️ touches host install paths |
-| #88 | ST10: group `scripts/` by concern | S (~30-60 min) | None — lowest priority |
+| ~~#86~~ | ~~ST7: decide `agents/openai.yaml` single-child~~ — **Resolved**: documented compatibility surface in `agents/README.md` | done | `agents/README.md` |
+| ~~#87~~ | ~~ST8: decide `skills/root/` single-child~~ — **Resolved**: documented root-entrypoint taxonomy in `skills/root/README.md` | done | `skills/root/README.md` |
+| ~~#88~~ | ~~ST10: group `scripts/` by concern~~ — **Resolved**: grouped active entrypoints by concern | done | `scripts/README.md` |
 
-**Easy filler**: #83, #85, #86 — small, independent, glaocon can pick when queue is light.
+**Easy filler**: #83, #85 — small, independent, glaocon can pick when queue is light.
 
 ---
 
@@ -172,7 +172,7 @@ Doc refreshes that should happen post-D2 to keep architecture docs in sync.
       #49 PR #47 follow-up
       #64 local-provider traceability
       #73 local verifyCodex/Gemini
-      #83 ST2  | #85 ST4 | #86 ST7 | #87 ST8 | #88 ST10
+      #83 ST2  | #85 ST4
       #84 ST3  (needs RFC first)
 ```
 
@@ -187,8 +187,8 @@ When glaocon's queue dips below 3 active issues, dispatch the next eligible:
 1. **Critical-path D2/D3 chains**: #66 → #69 → #70 → #71 (D2 path); #65 → #74 → #77/#78 → #79 (D3 path)
 2. **Independent fixes with audit findings**: #64 (already assigned), #73
 3. **#41 chain unblocking ST1**: #63 → #72 → #82 (ST1 + ST9)
-4. **ST polish filler**: #83, #85, #86, #87 — assign one per dispatch when no critical-path issue ready
-5. **Lowest priority**: #88 ST10, doc refreshes #89/#90
+4. **ST polish filler**: #83, #85 — assign one per dispatch when no critical-path issue ready
+5. **Lowest priority**: doc refreshes #89/#90
 
 ### Don't dispatch yet
 
